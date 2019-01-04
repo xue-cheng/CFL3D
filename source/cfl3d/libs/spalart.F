@@ -25,7 +25,7 @@ c
      + fx,workx,by,cy,dy,fy,worky,bz,cz,dz,fz,workz,ntime,
      + tj0,tk0,ti0,nbl,qj0,qk0,qi0,blank,iover,sumn1,sumn2,negn1,negn2,
      + tursav2,volj0,volk0,voli0,nou,bou,nbuf,ibufdim,iex,iex2,iex3,
-     + bcj,bck,bci,ux,vx,nummem,fd,isarcnum)
+     + bcj,bck,bci,ux,vx,nummem,fd,fe,isarcnum)
 c
 c     $Id$
 c
@@ -77,7 +77,8 @@ c
      + vor(jdim-1,kdim-1,idim-1)
       dimension damp1(jdim-1,kdim-1,idim-1),
      + fnu(0:jdim,0:kdim,0-iex3:idim+iex3),
-     + timestp(jdim-1,kdim-1,idim-1),fd(jdim-1,kdim-1,idim-1)
+     + timestp(jdim-1,kdim-1,idim-1),fd(jdim-1,kdim-1,idim-1),
+     + fe(jdim-1,kdim-1,idim-1)
       dimension bx(kdim-1,jdim-1),cx(kdim-1,jdim-1),dx(kdim-1,jdim-1),
      + fx(kdim-1,jdim-1),workx(kdim-1,jdim-1),
      +          by(jdim-1,kdim-1),cy(jdim-1,kdim-1),dy(jdim-1,kdim-1),
@@ -137,11 +138,16 @@ c
            write(bou(nou(1),1),'(''   computing turbulent'',
      +       '' viscosity using Spalart MuDDES (cdes='',f7.3,
      +       '',cddes='',f7.3,''), block ='',i4)') cdes,cddes,nbl
-         else if (ides .ge. 7) then
+         else if (ides .ge. 7 .and. idex .le. 10) then
            nou(1) = min(nou(1)+1,ibufdim)
            write(bou(nou(1),1),'(''   computing turbulent'',
      +       '' viscosity using S-A fd on nu (cdes='',f7.3,
      +       '',cddes='',f7.3,''), block ='',i4)') cdes,cddes,nbl
+         else if (ides .ge. 10) then
+           nou(1) = min(nou(1)+1,ibufdim)
+           write(bou(nou(1),1),'(''   computing turbulent'',
+     +       '' viscosity using Spalart IDDES (cdes='',f7.3,
+     +       ''), block ='',i4)') cdes,nbl
          else
            nou(1) = min(nou(1)+1,ibufdim)
            write(bou(nou(1),1),'(''   computing turbulent'',
@@ -1274,7 +1280,7 @@ c
             enddo
           enddo
         enddo
-        elseif (ides .ge. 2) then
+        elseif (ides .ge. 2 .and. ides .lt. 10) then
 c       DDES (TCFD 20:181-195, 2006)
         do i=1,idim-1
           do j=1,jdim-1
@@ -1303,6 +1309,51 @@ c
               else
                  damp1(j,k,i) = ccabs(smin(j,k,i))
               end if
+            enddo
+          enddo
+        enddo
+        elseif (ides .ge. 10) then 
+c       IDDES
+        do i=1,idim-1
+          do j=1,jdim-1
+            do k=1,kdim-1
+              deltaj = 2.*vol(j,k,i)/(sj(j,k,i,4)+sj(j+1,k,i,4))
+              deltak = 2.*vol(j,k,i)/(sk(j,k,i,4)+sk(j,k+1,i,4))
+              deltai = 2.*vol(j,k,i)/(si(j,k,i,4)+si(j,k,i+1,4))
+              delta = ccmax(deltaj,deltak)
+c
+c Modification to allow DES to run in 2d
+c
+              if( i2d .ne. 1 .and. iaxi2planeturb .ne. 1 ) then
+                 delta = ccmax(delta,deltai)
+              end if
+
+              dist = ccabs(smin(j,k,i))
+              velterm=ux(j,k,i,1)**2 + ux(j,k,i,2)**2 + ux(j,k,i,3)**2 +
+     +                ux(j,k,i,4)**2 + ux(j,k,i,5)**2 + ux(j,k,i,6)**2 +
+     +                ux(j,k,i,7)**2 + ux(j,k,i,8)**2 + ux(j,k,i,9)**2
+              rd_deno = 1./(sqrt(velterm)*akarman*akarman*dist*dist*re)
+              rdt = vist3d(j,k,i)*rd_deno
+              rdl = fnu(j,k,i)*rd_deno
+c TODO: ADD parameter: cdt cdl 
+              ft = cctanh((8.0*rdt)**3)
+              fl = cctanh((8.0*rdl)**10)
+              ra2 = (0.25-dist/delta)**2
+              fb = ccmincr(2*exp(-9.0*ra2), 1.0)
+c temporarily store fe2 in fe
+              fe(j,k,i) = 1.0 - ccmax(ft, fl)
+              if(ra .ge. 0.0) then
+c TODO: add PHI here(low Re corr)
+                fe(j,k,i) = fe(j,k,i) *
+     *            ccmaxcr(2*exp(-11.09*ra2)-1.0, 0.0)
+              else
+c TODO: add PHI here(low Re corr)
+                fe(j,k,i) = fe(j,k,i) *
+     *            ccmaxcr(2*exp(-9.0*ra2)-1.0, 0.0)
+              end if
+              fd(j,k,i) = ccmax(ft, fb)
+              damp1(j,k,i) = fd(j,k,i)*(1.0+fe(j,k,i))*dist + 
+     +          (1.0-fd(j,k,i))*cdes*delta
             enddo
           enddo
         enddo
@@ -2512,7 +2563,8 @@ c Update VIST3D and save TURRE in TURSAV
               fv1=chi**3/(chi**3+cv1**3)
               vist3d(j,k,i)=fv1*turre(j,k,i)*q(j,k,i,1)
             end if
-            if( ides .ge. 4 .and. real(fd(j,k,i)) .gt. real(cddes)) then
+            if((ides .ge. 4 .and. ides .lt. 10) .and.
+     +          real(fd(j,k,i)) .gt. real(cddes)) then
                vist3d(j,k,i) = vist3d(j,k,i)
      $              * (1.d0 - fd(j,k,i))/(1.d0-cddes)
             end if
