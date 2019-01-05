@@ -25,7 +25,7 @@ c
      + fx,workx,by,cy,dy,fy,worky,bz,cz,dz,fz,workz,ntime,
      + tj0,tk0,ti0,nbl,qj0,qk0,qi0,blank,iover,sumn1,sumn2,negn1,negn2,
      + tursav2,volj0,volk0,voli0,nou,bou,nbuf,ibufdim,iex,iex2,iex3,
-     + bcj,bck,bci,ux,vx,nummem,fd,fe,isarcnum)
+     + bcj,bck,bci,ux,vx,nummem,fd,isarcnum)
 c
 c     $Id$
 c
@@ -77,8 +77,7 @@ c
      + vor(jdim-1,kdim-1,idim-1)
       dimension damp1(jdim-1,kdim-1,idim-1),
      + fnu(0:jdim,0:kdim,0-iex3:idim+iex3),
-     + timestp(jdim-1,kdim-1,idim-1),fd(jdim-1,kdim-1,idim-1),
-     + fe(jdim-1,kdim-1,idim-1)
+     + timestp(jdim-1,kdim-1,idim-1),fd(jdim-1,kdim-1,idim-1)
       dimension bx(kdim-1,jdim-1),cx(kdim-1,jdim-1),dx(kdim-1,jdim-1),
      + fx(kdim-1,jdim-1),workx(kdim-1,jdim-1),
      +          by(jdim-1,kdim-1),cy(jdim-1,kdim-1),dy(jdim-1,kdim-1),
@@ -1341,18 +1340,17 @@ c TODO: ADD parameter: cdt cdl
             ra2 = (0.25-dist/delta)**2
             fb = ccmincr(2*exp(-9.0*ra2), 1.0)
 c temporarily store fe2 in fe
-            fe(j,k,i) = 1.0 - ccmax(ft, fl)
+            fe = 1.0 - ccmax(ft, fl)
             if(ra .ge. 0.0) then
-c TODO: add PHI here(low Re corr)
-              fe(j,k,i) = fe(j,k,i) *
-     *          ccmaxcr(2*exp(-11.09*ra2)-1.0, 0.0)
+c TODO: add low Re corr
+              fe = fe*ccmaxcr(2*exp(-11.09*ra2)-1.0, 0.0)
             else
-c TODO: add PHI here(low Re corr)
-              fe(j,k,i) = fe(j,k,i) *
-     *          ccmaxcr(2*exp(-9.0*ra2)-1.0, 0.0)
+c TODO: add low Re corr
+              fe = fe*ccmaxcr(2*exp(-9.0*ra2)-1.0, 0.0)
             end if
             fd(j,k,i) = ccmax(ft, fb)
-            damp1(j,k,i) = fd(j,k,i)*(1.0+fe(j,k,i))*dist + 
+c TODO: add low Re corr
+            damp1(j,k,i) = fd(j,k,i)*(1.0+fe)*dist + 
      +        (1.0-fd(j,k,i))*cdes*delta
           enddo
         enddo
