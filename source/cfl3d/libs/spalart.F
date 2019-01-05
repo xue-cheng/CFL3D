@@ -1260,112 +1260,112 @@ c    Add source term to RHS
       end if
 c     can use damp1 to temporarily store distance variable (different for DES)
 c     (later, damp1 is used to store LHS implicit contribution)
-        if (ides .eq. 1) then
-c       DES
-        do i=1,idim-1
-          do j=1,jdim-1
-            do k=1,kdim-1
-              deltaj = 2.*vol(j,k,i)/(sj(j,k,i,4)+sj(j+1,k,i,4))
-              deltak = 2.*vol(j,k,i)/(sk(j,k,i,4)+sk(j,k+1,i,4))
-              deltai = 2.*vol(j,k,i)/(si(j,k,i,4)+si(j,k,i+1,4))
-              delta = ccmax(deltaj,deltak)
+      if (ides .eq. 1) then
+c     DES
+      do i=1,idim-1
+        do j=1,jdim-1
+          do k=1,kdim-1
+            deltaj = 2.*vol(j,k,i)/(sj(j,k,i,4)+sj(j+1,k,i,4))
+            deltak = 2.*vol(j,k,i)/(sk(j,k,i,4)+sk(j,k+1,i,4))
+            deltai = 2.*vol(j,k,i)/(si(j,k,i,4)+si(j,k,i+1,4))
+            delta = ccmax(deltaj,deltak)
 c
 c Modification to allow DES to run in 2d
 c
-              if( i2d .ne. 1 .and. iaxi2planeturb .ne. 1 ) then
-                 delta = ccmax(delta,deltai)
-              end if
+            if( i2d .ne. 1 .and. iaxi2planeturb .ne. 1 ) then
+               delta = ccmax(delta,deltai)
+            end if
  
-              damp1(j,k,i) = ccmin(ccabs(smin(j,k,i)),cdes*delta)
-            enddo
+            damp1(j,k,i) = ccmin(ccabs(smin(j,k,i)),cdes*delta)
           enddo
         enddo
-        elseif (ides .ge. 2 .and. ides .lt. 10) then
-c       DDES (TCFD 20:181-195, 2006)
-        do i=1,idim-1
-          do j=1,jdim-1
-            do k=1,kdim-1
-              deltaj = 2.*vol(j,k,i)/(sj(j,k,i,4)+sj(j+1,k,i,4))
-              deltak = 2.*vol(j,k,i)/(sk(j,k,i,4)+sk(j,k+1,i,4))
-              deltai = 2.*vol(j,k,i)/(si(j,k,i,4)+si(j,k,i+1,4))
-              delta = ccmax(deltaj,deltak)
+      enddo
+      elseif (ides .ge. 2 .and. ides .lt. 10) then
+c     DDES (TCFD 20:181-195, 2006)
+      do i=1,idim-1
+        do j=1,jdim-1
+          do k=1,kdim-1
+            deltaj = 2.*vol(j,k,i)/(sj(j,k,i,4)+sj(j+1,k,i,4))
+            deltak = 2.*vol(j,k,i)/(sk(j,k,i,4)+sk(j,k+1,i,4))
+            deltai = 2.*vol(j,k,i)/(si(j,k,i,4)+si(j,k,i+1,4))
+            delta = ccmax(deltaj,deltak)
 c
 c Modification to allow DES to run in 2d
 c
-              if( i2d .ne. 1 .and. iaxi2planeturb .ne. 1 ) then
-                 delta = ccmax(delta,deltai)
-              end if
+            if( i2d .ne. 1 .and. iaxi2planeturb .ne. 1 ) then
+               delta = ccmax(delta,deltai)
+            end if
 
-              dist = ccabs(smin(j,k,i))
-              velterm=ux(j,k,i,1)**2 + ux(j,k,i,2)**2 + ux(j,k,i,3)**2 +
-     +                ux(j,k,i,4)**2 + ux(j,k,i,5)**2 + ux(j,k,i,6)**2 +
-     +                ux(j,k,i,7)**2 + ux(j,k,i,8)**2 + ux(j,k,i,9)**2
-              rd = turre(j,k,i)/(sqrt(velterm)*akarman*akarman*
-     +             dist*dist*re)
-              fd(j,k,i) = 1.0 - cctanh((8.0*rd)*(8.0*rd)*(8.0*rd))
-              if( ides .ne. 7 ) then
-                 term = ccmaxrc(0.0,dist-cdes*delta) 
-                 damp1(j,k,i) = dist - fd(j,k,i)*term
-              else
-                 damp1(j,k,i) = ccabs(smin(j,k,i))
-              end if
-            enddo
+            dist = ccabs(smin(j,k,i))
+            velterm=ux(j,k,i,1)**2 + ux(j,k,i,2)**2 + ux(j,k,i,3)**2 +
+     +              ux(j,k,i,4)**2 + ux(j,k,i,5)**2 + ux(j,k,i,6)**2 +
+     +              ux(j,k,i,7)**2 + ux(j,k,i,8)**2 + ux(j,k,i,9)**2
+            rd = turre(j,k,i)/(sqrt(velterm)*akarman*akarman*
+     +           dist*dist*re)
+            fd(j,k,i) = 1.0 - cctanh((8.0*rd)*(8.0*rd)*(8.0*rd))
+            if( ides .ne. 7 ) then
+               term = ccmaxrc(0.0,dist-cdes*delta) 
+               damp1(j,k,i) = dist - fd(j,k,i)*term
+            else
+               damp1(j,k,i) = ccabs(smin(j,k,i))
+            end if
           enddo
         enddo
-        elseif (ides .ge. 10) then 
-c       IDDES
-        do i=1,idim-1
-          do j=1,jdim-1
-            do k=1,kdim-1
-              deltaj = 2.*vol(j,k,i)/(sj(j,k,i,4)+sj(j+1,k,i,4))
-              deltak = 2.*vol(j,k,i)/(sk(j,k,i,4)+sk(j,k+1,i,4))
-              deltai = 2.*vol(j,k,i)/(si(j,k,i,4)+si(j,k,i+1,4))
-              delta = ccmax(deltaj,deltak)
+      enddo
+      elseif (ides .ge. 10) then 
+c     IDDES
+      do i=1,idim-1
+        do j=1,jdim-1
+          do k=1,kdim-1
+            deltaj = 2.*vol(j,k,i)/(sj(j,k,i,4)+sj(j+1,k,i,4))
+            deltak = 2.*vol(j,k,i)/(sk(j,k,i,4)+sk(j,k+1,i,4))
+            deltai = 2.*vol(j,k,i)/(si(j,k,i,4)+si(j,k,i+1,4))
+            delta = ccmax(deltaj,deltak)
 c
-c Modification to allow DES to run in 2d
+c Modifition to allow DES to run in 2d
 c
-              if( i2d .ne. 1 .and. iaxi2planeturb .ne. 1 ) then
-                 delta = ccmax(delta,deltai)
-              end if
+            if( i2d .ne. 1 .and. iaxi2planeturb .ne. 1 ) then
+               delta = ccmax(delta,deltai)
+            end if
 
-              dist = ccabs(smin(j,k,i))
-              velterm=ux(j,k,i,1)**2 + ux(j,k,i,2)**2 + ux(j,k,i,3)**2 +
-     +                ux(j,k,i,4)**2 + ux(j,k,i,5)**2 + ux(j,k,i,6)**2 +
-     +                ux(j,k,i,7)**2 + ux(j,k,i,8)**2 + ux(j,k,i,9)**2
-              rd_deno = 1./(sqrt(velterm)*akarman*akarman*dist*dist*re)
-              rdt = vist3d(j,k,i)*rd_deno
-              rdl = fnu(j,k,i)*rd_deno
+            dist = ccabs(smin(j,k,i))
+            velterm=ux(j,k,i,1)**2 + ux(j,k,i,2)**2 + ux(j,k,i,3)**2 +
+     +              ux(j,k,i,4)**2 + ux(j,k,i,5)**2 + ux(j,k,i,6)**2 +
+     +              ux(j,k,i,7)**2 + ux(j,k,i,8)**2 + ux(j,k,i,9)**2
+            rd_deno = 1./(sqrt(velterm)*akarman*akarman*dist*dist*re)
+            rdt = vist3d(j,k,i)*rd_deno
+            rdl = fnu(j,k,i)*rd_deno
 c TODO: ADD parameter: cdt cdl 
-              ft = cctanh((8.0*rdt)**3)
-              fl = cctanh((8.0*rdl)**10)
-              ra2 = (0.25-dist/delta)**2
-              fb = ccmincr(2*exp(-9.0*ra2), 1.0)
+            ft = cctanh((8.0*rdt)**3)
+            fl = cctanh((8.0*rdl)**10)
+            ra2 = (0.25-dist/delta)**2
+            fb = ccmincr(2*exp(-9.0*ra2), 1.0)
 c temporarily store fe2 in fe
-              fe(j,k,i) = 1.0 - ccmax(ft, fl)
-              if(ra .ge. 0.0) then
+            fe(j,k,i) = 1.0 - ccmax(ft, fl)
+            if(ra .ge. 0.0) then
 c TODO: add PHI here(low Re corr)
-                fe(j,k,i) = fe(j,k,i) *
-     *            ccmaxcr(2*exp(-11.09*ra2)-1.0, 0.0)
-              else
+              fe(j,k,i) = fe(j,k,i) *
+     *          ccmaxcr(2*exp(-11.09*ra2)-1.0, 0.0)
+            else
 c TODO: add PHI here(low Re corr)
-                fe(j,k,i) = fe(j,k,i) *
-     *            ccmaxcr(2*exp(-9.0*ra2)-1.0, 0.0)
-              end if
-              fd(j,k,i) = ccmax(ft, fb)
-              damp1(j,k,i) = fd(j,k,i)*(1.0+fe(j,k,i))*dist + 
-     +          (1.0-fd(j,k,i))*cdes*delta
-            enddo
+              fe(j,k,i) = fe(j,k,i) *
+     *          ccmaxcr(2*exp(-9.0*ra2)-1.0, 0.0)
+            end if
+            fd(j,k,i) = ccmax(ft, fb)
+            damp1(j,k,i) = fd(j,k,i)*(1.0+fe(j,k,i))*dist + 
+     +        (1.0-fd(j,k,i))*cdes*delta
           enddo
         enddo
-        else
-        do i=1,idim-1
-          do j=1,jdim-1
-            do k=1,kdim-1
-              damp1(j,k,i) = ccabs(smin(j,k,i))
-            enddo
+      enddo
+      else
+      do i=1,idim-1
+        do j=1,jdim-1
+          do k=1,kdim-1
+            damp1(j,k,i) = ccabs(smin(j,k,i))
           enddo
         enddo
-        end if
+      enddo
+      end if
 c
 c   For SARC model, eventually need to compute rtilde as fn of Dalpha/Dt
         if (isarc2d .eq. 1) then
