@@ -1337,11 +1337,12 @@ c
 c TODO: ADD parameter: cdt cdl 
             ft = cctanh((8.0*rdt)**3)
             fl = cctanh((8.0*rdl)**10)
-            ra2 = (0.25-dist/delta)**2
+            ra = 0.25-dist/delta
+            ra2 = ra**2
             fb = ccmincr(2*exp(-9.0*ra2), 1.0)
 c temporarily store fe2 in fe
             fe = 1.0 - ccmax(ft, fl)
-            if(ra .ge. 0.0) then
+            if(real(ra) .ge. 0.0) then
 c TODO: add low Re corr
               fe = fe*ccmaxcr(2*exp(-11.09*ra2)-1.0, 0.0)
             else
