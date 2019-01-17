@@ -137,11 +137,16 @@ c
            write(bou(nou(1),1),'(''   computing turbulent'',
      +       '' viscosity using Spalart MuDDES (cdes='',f7.3,
      +       '',cddes='',f7.3,''), block ='',i4)') cdes,cddes,nbl
-         else if (ides .ge. 7) then
+         else if (ides .ge. 7 .and. idex .le. 10) then
            nou(1) = min(nou(1)+1,ibufdim)
            write(bou(nou(1),1),'(''   computing turbulent'',
      +       '' viscosity using S-A fd on nu (cdes='',f7.3,
      +       '',cddes='',f7.3,''), block ='',i4)') cdes,cddes,nbl
+         else if (ides .ge. 10) then
+           nou(1) = min(nou(1)+1,ibufdim)
+           write(bou(nou(1),1),'(''   computing turbulent'',
+     +       '' viscosity using Spalart IDDES (cdes='',f7.3,
+     +       ''), block ='',i4)') cdes,nbl
          else
            nou(1) = min(nou(1)+1,ibufdim)
            write(bou(nou(1),1),'(''   computing turbulent'',
@@ -1254,67 +1259,112 @@ c    Add source term to RHS
       end if
 c     can use damp1 to temporarily store distance variable (different for DES)
 c     (later, damp1 is used to store LHS implicit contribution)
-        if (ides .eq. 1) then
-c       DES
-        do i=1,idim-1
-          do j=1,jdim-1
-            do k=1,kdim-1
-              deltaj = 2.*vol(j,k,i)/(sj(j,k,i,4)+sj(j+1,k,i,4))
-              deltak = 2.*vol(j,k,i)/(sk(j,k,i,4)+sk(j,k+1,i,4))
-              deltai = 2.*vol(j,k,i)/(si(j,k,i,4)+si(j,k,i+1,4))
-              delta = ccmax(deltaj,deltak)
+      if (ides .eq. 1) then
+c     DES
+      do i=1,idim-1
+        do j=1,jdim-1
+          do k=1,kdim-1
+            deltaj = 2.*vol(j,k,i)/(sj(j,k,i,4)+sj(j+1,k,i,4))
+            deltak = 2.*vol(j,k,i)/(sk(j,k,i,4)+sk(j,k+1,i,4))
+            deltai = 2.*vol(j,k,i)/(si(j,k,i,4)+si(j,k,i+1,4))
+            delta = ccmax(deltaj,deltak)
 c
 c Modification to allow DES to run in 2d
 c
-              if( i2d .ne. 1 .and. iaxi2planeturb .ne. 1 ) then
-                 delta = ccmax(delta,deltai)
-              end if
+            if( i2d .ne. 1 .and. iaxi2planeturb .ne. 1 ) then
+               delta = ccmax(delta,deltai)
+            end if
  
-              damp1(j,k,i) = ccmin(ccabs(smin(j,k,i)),cdes*delta)
-            enddo
+            damp1(j,k,i) = ccmin(ccabs(smin(j,k,i)),cdes*delta)
           enddo
         enddo
-        elseif (ides .ge. 2) then
-c       DDES (TCFD 20:181-195, 2006)
-        do i=1,idim-1
-          do j=1,jdim-1
-            do k=1,kdim-1
-              deltaj = 2.*vol(j,k,i)/(sj(j,k,i,4)+sj(j+1,k,i,4))
-              deltak = 2.*vol(j,k,i)/(sk(j,k,i,4)+sk(j,k+1,i,4))
-              deltai = 2.*vol(j,k,i)/(si(j,k,i,4)+si(j,k,i+1,4))
-              delta = ccmax(deltaj,deltak)
+      enddo
+      elseif (ides .ge. 2 .and. ides .lt. 10) then
+c     DDES (TCFD 20:181-195, 2006)
+      do i=1,idim-1
+        do j=1,jdim-1
+          do k=1,kdim-1
+            deltaj = 2.*vol(j,k,i)/(sj(j,k,i,4)+sj(j+1,k,i,4))
+            deltak = 2.*vol(j,k,i)/(sk(j,k,i,4)+sk(j,k+1,i,4))
+            deltai = 2.*vol(j,k,i)/(si(j,k,i,4)+si(j,k,i+1,4))
+            delta = ccmax(deltaj,deltak)
 c
 c Modification to allow DES to run in 2d
 c
-              if( i2d .ne. 1 .and. iaxi2planeturb .ne. 1 ) then
-                 delta = ccmax(delta,deltai)
-              end if
+            if( i2d .ne. 1 .and. iaxi2planeturb .ne. 1 ) then
+               delta = ccmax(delta,deltai)
+            end if
 
-              dist = ccabs(smin(j,k,i))
-              velterm=ux(j,k,i,1)**2 + ux(j,k,i,2)**2 + ux(j,k,i,3)**2 +
-     +                ux(j,k,i,4)**2 + ux(j,k,i,5)**2 + ux(j,k,i,6)**2 +
-     +                ux(j,k,i,7)**2 + ux(j,k,i,8)**2 + ux(j,k,i,9)**2
-              rd = turre(j,k,i)/(sqrt(velterm)*akarman*akarman*
-     +             dist*dist*re)
-              fd(j,k,i) = 1.0 - cctanh((8.0*rd)*(8.0*rd)*(8.0*rd))
-              if( ides .ne. 7 ) then
-                 term = ccmaxrc(0.0,dist-cdes*delta) 
-                 damp1(j,k,i) = dist - fd(j,k,i)*term
-              else
-                 damp1(j,k,i) = ccabs(smin(j,k,i))
-              end if
-            enddo
+            dist = ccabs(smin(j,k,i))
+            velterm=ux(j,k,i,1)**2 + ux(j,k,i,2)**2 + ux(j,k,i,3)**2 +
+     +              ux(j,k,i,4)**2 + ux(j,k,i,5)**2 + ux(j,k,i,6)**2 +
+     +              ux(j,k,i,7)**2 + ux(j,k,i,8)**2 + ux(j,k,i,9)**2
+            rd = turre(j,k,i)/(sqrt(velterm)*akarman*akarman*
+     +           dist*dist*re)
+            fd(j,k,i) = 1.0 - cctanh((8.0*rd)*(8.0*rd)*(8.0*rd))
+            if( ides .ne. 7 ) then
+               term = ccmaxrc(0.0,dist-cdes*delta) 
+               damp1(j,k,i) = dist - fd(j,k,i)*term
+            else
+               damp1(j,k,i) = ccabs(smin(j,k,i))
+            end if
           enddo
         enddo
-        else
-        do i=1,idim-1
-          do j=1,jdim-1
-            do k=1,kdim-1
-              damp1(j,k,i) = ccabs(smin(j,k,i))
-            enddo
+      enddo
+      elseif (ides .ge. 10) then 
+c     IDDES
+      do i=1,idim-1
+        do j=1,jdim-1
+          do k=1,kdim-1
+            deltaj = 2.*vol(j,k,i)/(sj(j,k,i,4)+sj(j+1,k,i,4))
+            deltak = 2.*vol(j,k,i)/(sk(j,k,i,4)+sk(j,k+1,i,4))
+            deltai = 2.*vol(j,k,i)/(si(j,k,i,4)+si(j,k,i+1,4))
+            delta = ccmax(deltaj,deltak)
+c
+c Modifition to allow DES to run in 2d
+c
+            if( i2d .ne. 1 .and. iaxi2planeturb .ne. 1 ) then
+               delta = ccmax(delta,deltai)
+            end if
+
+            dist = ccabs(smin(j,k,i))
+            velterm=ux(j,k,i,1)**2 + ux(j,k,i,2)**2 + ux(j,k,i,3)**2 +
+     +              ux(j,k,i,4)**2 + ux(j,k,i,5)**2 + ux(j,k,i,6)**2 +
+     +              ux(j,k,i,7)**2 + ux(j,k,i,8)**2 + ux(j,k,i,9)**2
+            rd_deno = 1./(sqrt(velterm)*akarman*akarman*dist*dist*re)
+            rdt = vist3d(j,k,i)*rd_deno
+            rdl = fnu(j,k,i)*rd_deno
+c TODO: ADD parameter: cdt cdl 
+            ft = cctanh((8.0*rdt)**3)
+            fl = cctanh((8.0*rdl)**10)
+            ra = 0.25-dist/delta
+            ra2 = ra**2
+            fb = ccmincr(2*exp(-9.0*ra2), 1.0)
+c temporarily store fe2 in fe
+            fe = 1.0 - ccmax(ft, fl)
+            if(real(ra) .ge. 0.0) then
+c TODO: add low Re corr
+              fe = fe*ccmaxcr(2*exp(-11.09*ra2)-1.0, 0.0)
+            else
+c TODO: add low Re corr
+              fe = fe*ccmaxcr(2*exp(-9.0*ra2)-1.0, 0.0)
+            end if
+            fd(j,k,i) = ccmax(ft, fb)
+c TODO: add low Re corr
+            damp1(j,k,i) = fd(j,k,i)*(1.0+fe)*dist + 
+     +        (1.0-fd(j,k,i))*cdes*delta
           enddo
         enddo
-        end if
+      enddo
+      else
+      do i=1,idim-1
+        do j=1,jdim-1
+          do k=1,kdim-1
+            damp1(j,k,i) = ccabs(smin(j,k,i))
+          enddo
+        enddo
+      enddo
+      end if
 c
 c   For SARC model, eventually need to compute rtilde as fn of Dalpha/Dt
         if (isarc2d .eq. 1) then
@@ -2512,7 +2562,8 @@ c Update VIST3D and save TURRE in TURSAV
               fv1=chi**3/(chi**3+cv1**3)
               vist3d(j,k,i)=fv1*turre(j,k,i)*q(j,k,i,1)
             end if
-            if( ides .ge. 4 .and. real(fd(j,k,i)) .gt. real(cddes)) then
+            if((ides .ge. 4 .and. ides .lt. 10) .and.
+     +          real(fd(j,k,i)) .gt. real(cddes)) then
                vist3d(j,k,i) = vist3d(j,k,i)
      $              * (1.d0 - fd(j,k,i))/(1.d0-cddes)
             end if
