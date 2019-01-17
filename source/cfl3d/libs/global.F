@@ -1651,7 +1651,8 @@ c
       end if
       if ((abs(ibctyp) .eq. 2004 .or. abs(ibctyp) .eq. 2014 .or.
      .     abs(ibctyp) .eq. 2024 .or. abs(ibctyp) .eq. 2034 .or.
-     .     abs(ibctyp) .eq. 2016) .and. iviscg(nbl,1) .eq. 0) then
+     .     abs(ibctyp) .eq. 2016 .or. abs(ibctyp) .eq. 2036) .and. 
+     .     iviscg(nbl,1) .eq. 0) then
        write(iunit11,'('' stopping...must have ivisc(i) > 0 if'')')
        write(iunit11,'(''   bc2004/14/24/34/16 is being used on'',
      .   '' an i-face'')')
@@ -1703,7 +1704,7 @@ c
       if(abs(ibctyp).eq.2004 .or. abs(ibctyp).eq.1005 .or.
      .   abs(ibctyp).eq.1006 .or. abs(ibctyp).eq.2014 .or.
      .   abs(ibctyp).eq.2024 .or. abs(ibctyp).eq.2034 .or.
-     .   abs(ibctyp).eq.2016) mfoseg = 1
+     .   abs(ibctyp).eq.2016 .or. abs(ibctyp).eq.2036) mfoseg = 1
       ifoseg = ifoseg*mfoseg
       nseg = abs(nseg)
       if (ndata.gt.0) then
@@ -1922,7 +1923,8 @@ c
       end if
       if ((abs(ibctyp) .eq. 2004 .or. abs(ibctyp) .eq. 2014 .or.
      .     abs(ibctyp) .eq. 2024 .or. abs(ibctyp) .eq. 2034 .or.
-     .     abs(ibctyp) .eq. 2016) .and. iviscg(nbl,1) .eq. 0) then
+     .     abs(ibctyp) .eq. 2016 .or. abs(ibctyp) .eq. 2036) .and. 
+     .     iviscg(nbl,1) .eq. 0) then
        write(iunit11,'('' stopping...must have ivisc(i) > 0 if'')')
        write(iunit11,'(''   bc2004/14/24/34/16 is being used on'',
      .   '' an i-face'')')
@@ -1970,7 +1972,7 @@ c
       if(abs(ibctyp).eq.2004 .or. abs(ibctyp).eq.1005 .or.
      .   abs(ibctyp).eq.1006 .or. abs(ibctyp).eq.2014 .or.
      .   abs(ibctyp).eq.2024 .or. abs(ibctyp).eq.2034 .or.
-     .   abs(ibctyp).eq.2016) mfoseg = 1
+     .   abs(ibctyp).eq.2016 .or. abs(ibctyp).eq.2036) mfoseg = 1
       ifoseg = ifoseg*mfoseg
       nseg = abs(nseg)
       if (ndata.gt.0) then
@@ -2177,7 +2179,8 @@ c
       end if
       if ((abs(jbctyp) .eq. 2004 .or. abs(jbctyp) .eq. 2014 .or.
      .     abs(jbctyp) .eq. 2024 .or. abs(jbctyp) .eq. 2034 .or.
-     .     abs(jbctyp) .eq. 2016) .and. iviscg(nbl,2) .eq. 0) then
+     .     abs(jbctyp) .eq. 2016 .or. abs(jbctyp) .eq. 2036) .and.
+     .     iviscg(nbl,2) .eq. 0) then
        write(iunit11,'('' stopping...must have ivisc(j) > 0 if'')')
        write(iunit11,'(''   bc2004/14/24/34/16 is being used on'',
      .   '' a j-face'')')
@@ -2225,7 +2228,7 @@ c
       if(abs(jbctyp).eq.2004 .or. abs(jbctyp).eq.1005 .or.
      .   abs(jbctyp).eq.1006 .or. abs(jbctyp).eq.2014 .or.
      .   abs(jbctyp).eq.2024 .or. abs(jbctyp).eq.2034 .or.
-     .   abs(jbctyp).eq.2016) mfoseg = 1
+     .   abs(jbctyp).eq.2016 .or. abs(jbctyp).eq.2036) mfoseg = 1
       jfoseg = jfoseg*mfoseg
       nseg = abs(nseg)
       if (ndata.gt.0) then
@@ -2431,7 +2434,8 @@ c
       end if
       if ((abs(jbctyp) .eq. 2004 .or. abs(jbctyp) .eq. 2014 .or.
      .     abs(jbctyp) .eq. 2024 .or. abs(jbctyp) .eq. 2034 .or.
-     .     abs(jbctyp) .eq. 2016) .and. iviscg(nbl,2) .eq. 0) then
+     .     abs(jbctyp) .eq. 2016 .or. abs(jbctyp) .eq. 2036) .and.
+     .     iviscg(nbl,2) .eq. 0) then
        write(iunit11,'('' stopping...must have ivisc(j) > 0 if'')')
        write(iunit11,'(''   bc2004/14/24/34/16 is being used on'',
      .   '' a j-face'')')
@@ -2479,7 +2483,7 @@ c
       if(abs(jbctyp).eq.2004 .or. abs(jbctyp).eq.1005 .or.
      .   abs(jbctyp).eq.1006 .or. abs(jbctyp).eq.2014 .or.
      .   abs(jbctyp).eq.2024 .or. abs(jbctyp).eq.2034 .or.
-     .   abs(jbctyp).eq.2016) mfoseg = 1
+     .   abs(jbctyp).eq.2016 .or. abs(jbctyp).eq.2036) mfoseg = 1
       jfoseg = jfoseg*mfoseg
       nseg = abs(nseg)
       if (ndata.gt.0) then
@@ -2684,7 +2688,8 @@ c
       end if
       if ((abs(kbctyp) .eq. 2004 .or. abs(kbctyp) .eq. 2014 .or.
      .     abs(kbctyp) .eq. 2024 .or. abs(kbctyp) .eq. 2034 .or.
-     .     abs(kbctyp) .eq. 2016) .and. iviscg(nbl,3) .eq. 0) then
+     .     abs(kbctyp) .eq. 2016 .or. abs(kbctyp) .eq. 2036) .and.
+     .     iviscg(nbl,3) .eq. 0) then
        write(iunit11,'('' stopping...must have ivisc(k) > 0 if'')')
        write(iunit11,'(''   bc2004/14/24/34/16 is being used on'',
      .   '' a k-face'')')
@@ -2732,7 +2737,7 @@ c
       if(abs(kbctyp).eq.2004 .or. abs(kbctyp).eq.1005 .or.
      .   abs(kbctyp).eq.1006 .or. abs(kbctyp).eq.2014 .or.
      .   abs(kbctyp).eq.2024 .or. abs(kbctyp).eq.2034 .or.
-     .   abs(kbctyp).eq.2016) mfoseg = 1
+     .   abs(kbctyp).eq.2016 .or. abs(kbctyp).eq.2036) mfoseg = 1
       kfoseg = kfoseg*mfoseg
       nseg = abs(nseg)
       if (ndata.gt.0) then
@@ -2937,7 +2942,8 @@ c
       end if
       if ((abs(kbctyp) .eq. 2004 .or. abs(kbctyp) .eq. 2014 .or.
      .     abs(kbctyp) .eq. 2024 .or. abs(kbctyp) .eq. 2034 .or.
-     .     abs(kbctyp) .eq. 2016) .and. iviscg(nbl,3) .eq. 0) then
+     .     abs(kbctyp) .eq. 2016 .or. abs(kbctyp) .eq. 2036) .and.
+     .     iviscg(nbl,3) .eq. 0) then
        write(iunit11,'('' stopping...must have ivisc(k) > 0 if'')')
        write(iunit11,'(''   bc2004/14/24/34/16 is being used on'',
      .   '' a k-face'')')
@@ -2985,7 +2991,7 @@ c
       if(abs(kbctyp).eq.2004 .or. abs(kbctyp).eq.1005 .or.
      .   abs(kbctyp).eq.1006 .or. abs(kbctyp).eq.2014 .or.
      .   abs(kbctyp).eq.2024 .or. abs(kbctyp).eq.2034 .or.
-     .   abs(kbctyp).eq.2016) mfoseg = 1
+     .   abs(kbctyp).eq.2016 .or. abs(kbctyp).eq.2036) mfoseg = 1
       kfoseg = kfoseg*mfoseg
       nseg = abs(nseg)
       if (ndata.gt.0) then
@@ -3167,7 +3173,8 @@ c
      .          abs(ibcinfo(nbl,nseg,1,1)).eq.2014 .or.
      .          abs(ibcinfo(nbl,nseg,1,1)).eq.2024 .or.
      .          abs(ibcinfo(nbl,nseg,1,1)).eq.2034 .or.
-     .          abs(ibcinfo(nbl,nseg,1,1)).eq.2016) then
+     .          abs(ibcinfo(nbl,nseg,1,1)).eq.2016 .or.
+     .          abs(ibcinfo(nbl,nseg,1,1)).eq.2036) then
                 ii = 1
                 nplt3dtmp = nplt3dtmp + 1
                 ipl3dtmp(1,nplt3dtmp)   = ng
@@ -3190,7 +3197,8 @@ c
      .          abs(ibcinfo(nbl,nseg,1,2)).eq.2014 .or.
      .          abs(ibcinfo(nbl,nseg,1,2)).eq.2024 .or.
      .          abs(ibcinfo(nbl,nseg,1,2)).eq.2034 .or.
-     .          abs(ibcinfo(nbl,nseg,1,2)).eq.2016) then
+     .          abs(ibcinfo(nbl,nseg,1,2)).eq.2016 .or.
+     .          abs(ibcinfo(nbl,nseg,1,2)).eq.2036) then
                 ii = idim
                 nplt3dtmp = nplt3dtmp + 1
                 ipl3dtmp(1,nplt3dtmp)   = ng
@@ -3213,7 +3221,8 @@ c
      .          abs(jbcinfo(nbl,nseg,1,1)).eq.2014 .or.
      .          abs(jbcinfo(nbl,nseg,1,1)).eq.2024 .or.
      .          abs(jbcinfo(nbl,nseg,1,1)).eq.2034 .or.
-     .          abs(jbcinfo(nbl,nseg,1,1)).eq.2016) then
+     .          abs(jbcinfo(nbl,nseg,1,1)).eq.2016 .or.
+     .          abs(jbcinfo(nbl,nseg,1,1)).eq.2036) then
                 jj = 1
                 nplt3dtmp = nplt3dtmp + 1
                 ipl3dtmp(1,nplt3dtmp)   = ng
@@ -3236,7 +3245,8 @@ c
      .          abs(jbcinfo(nbl,nseg,1,2)).eq.2014 .or.
      .          abs(jbcinfo(nbl,nseg,1,2)).eq.2024 .or.
      .          abs(jbcinfo(nbl,nseg,1,2)).eq.2034 .or.
-     .          abs(jbcinfo(nbl,nseg,1,2)).eq.2016) then
+     .          abs(jbcinfo(nbl,nseg,1,2)).eq.2016 .or.
+     .          abs(jbcinfo(nbl,nseg,1,2)).eq.2036) then
                 jj = jdim
                 nplt3dtmp = nplt3dtmp + 1
                 ipl3dtmp(1,nplt3dtmp)   = ng
@@ -3259,7 +3269,8 @@ c
      .          abs(kbcinfo(nbl,nseg,1,1)).eq.2014 .or.
      .          abs(kbcinfo(nbl,nseg,1,1)).eq.2024 .or.
      .          abs(kbcinfo(nbl,nseg,1,1)).eq.2034 .or.
-     .          abs(kbcinfo(nbl,nseg,1,1)).eq.2016) then
+     .          abs(kbcinfo(nbl,nseg,1,1)).eq.2016 .or.
+     .          abs(kbcinfo(nbl,nseg,1,1)).eq.2036) then
                 kk = 1
                 nplt3dtmp = nplt3dtmp + 1
                 ipl3dtmp(1,nplt3dtmp)   = ng
@@ -3282,7 +3293,8 @@ c
      .          abs(kbcinfo(nbl,nseg,1,2)).eq.2014 .or.
      .          abs(kbcinfo(nbl,nseg,1,2)).eq.2024 .or.
      .          abs(kbcinfo(nbl,nseg,1,2)).eq.2034 .or.
-     .          abs(kbcinfo(nbl,nseg,1,2)).eq.2016) then
+     .          abs(kbcinfo(nbl,nseg,1,2)).eq.2016 .or.
+     .          abs(kbcinfo(nbl,nseg,1,2)).eq.2036) then
                 kk = kdim
                 nplt3dtmp = nplt3dtmp + 1
                 ipl3dtmp(1,nplt3dtmp)   = ng
@@ -7428,7 +7440,8 @@ c
      .     nbcinfo(nbl,nseg,1,n3).eq.2014.or.
      .     nbcinfo(nbl,nseg,1,n3).eq.2024.or.
      .     nbcinfo(nbl,nseg,1,n3).eq.2034.or.
-     .     nbcinfo(nbl,nseg,1,n3).eq.2016) then
+     .     nbcinfo(nbl,nseg,1,n3).eq.2016.or.
+     .     nbcinfo(nbl,nseg,1,n3).eq.2036) then
            if(nbcinfo(nbl,nseg,n1,n3).lt.ncs(nbl,iseg).and.      
      .        nbcinfo(nbl,nseg,n2,n3).ge.ncs(nbl,iseg)) 
      .        call skordr(nbl,nskpijk1(n),ncs(nbl,iseg)-1

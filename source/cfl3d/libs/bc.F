@@ -211,6 +211,34 @@ c              NOTES:
 c              1.  input direction numbers do not have to be normalized
 c              2.  rfreq = freq*lref/a_inf where freq is frequency in Hertz,
 c                  lref is reference length, and a_inf is speed of sound
+c      bc2036 - pulsed jet (set ndata=9)
+c           1) Twtype:
+c              Twtype > 0 (fixed wall temperature Tw/Tinf = Twtype)
+c              Twtype = 0 (adiabatic wall)
+c              Twtype < 0 (fixed wall temperature = stagnation temp)
+c
+c           2) cq0  = base component of surface jet
+c           3) cqa = amplitude component of surface jet
+c           4) sjetx = direction number for surface jet (x-direction)
+c           5) sjety = direction number for surface jet (y-direction)
+c           6) sjetz = direction number for surface jet (z-direction)
+c           7) t_cyc = reduced frequency of unsteady jet
+c              t_cyc > 0 (periodic)
+c              t_cyc = 0 (pulse on after d_cyc)
+c              t_cyc < 0 (pulse on between (abs(t_cyc), abs(t_cyc)+d_cyc))
+c           8) t_s99 = time of the pulsed jet achieving its maximum value
+c              t_s99 = 0 (step function)
+c              t_s99 > 0 (tanh function)
+c              t_s99 < 0 (linear function)
+c           9) d_cyc = duty cycle of the pulse
+c              NOTES:
+c              1.  input direction numbers do not have to be normalized
+c              2.  Set (sjetx,sjety,sjetz) = (0.0,0.0,0.0) for a
+c                  wall-normal surface jet.  In this case,
+c                  cq > 0 ==> flow into domain at i,j,k=1,1,1
+c                  cq > 0 ==> flow out of domain at i,j,k=idim,jdim,kdim
+c                  cq < 0 ==> flow out of domain at i,j,k=1,1,1
+c                  cq < 0 ==> flow in to domain at i,j,k=idim,jdim,kdim
 c      bc2018 - specify T, rhou, rhov, and rhow; extrapolate p from interior.
 c      bc2028 - specify freq, rhoumax, rhovmax, and rhowmax; extrapolate rho 
 c               and p from interior.
@@ -706,6 +734,16 @@ c
      .  ntime,w(lnbl),w(lxkb),w(lnbl),nou,bou,nbuf,ibufdim,myid,
      .  nummem)
 c
+      if (ibcinfo(nbl,nseg,1,1).eq.2036) 
+     .  call bc2036(jdim,kdim,idim,w(lq),w(lqj0),w(lqk0),w(lqi0),
+     .  w(lsj),w(lsk),w(lsi),w(lbcj),w(lbck),w(lbci),
+     .  w(lxtbj),w(lxtbk),w(lxtbi),w(latbj),w(latbk),w(latbi),
+     .  ista,iend,jsta,jend,ksta,kend,1,w(lxib),w(ltj0),w(ltk0),w(lti0),
+     .  w(lsnk0),w(lvis),w(lvj0),w(lvk0),w(lvi0),mdim,ndim,w(ldata),
+     .  filname,iuns,ibcinfo(nbl,nseg,1,1),w(lsni0),w(lsnk0),w(lsni0),
+     .  ntime,w(lnbl),w(lxkb),w(lnbl),nou,bou,nbuf,ibufdim,myid,
+     .  nummem)
+c
   802 continue
 c
 c********************
@@ -973,6 +1011,16 @@ c
 c
       if (ibcinfo(nbl,nseg,1,2).eq.2026)
      .  call bc2026(jdim,kdim,idim,w(lq),w(lqj0),w(lqk0),w(lqi0),
+     .  w(lsj),w(lsk),w(lsi),w(lbcj),w(lbck),w(lbci),
+     .  w(lxtbj),w(lxtbk),w(lxtbi),w(latbj),w(latbk),w(latbi),
+     .  ista,iend,jsta,jend,ksta,kend,2,w(lxib),w(ltj0),w(ltk0),w(lti0),
+     .  w(lsnk0),w(lvis),w(lvj0),w(lvk0),w(lvi0),mdim,ndim,w(ldata),
+     .  filname,iuns,ibcinfo(nbl,nseg,1,2),w(lsni0),w(lsnk0),w(lsni0),
+     .  ntime,w(lnbl),w(lxkb),w(lnbl),nou,bou,nbuf,ibufdim,myid,
+     .  nummem)
+c
+      if (ibcinfo(nbl,nseg,1,2).eq.2036)
+     .  call bc2036(jdim,kdim,idim,w(lq),w(lqj0),w(lqk0),w(lqi0),
      .  w(lsj),w(lsk),w(lsi),w(lbcj),w(lbck),w(lbci),
      .  w(lxtbj),w(lxtbk),w(lxtbi),w(latbj),w(latbk),w(latbi),
      .  ista,iend,jsta,jend,ksta,kend,2,w(lxib),w(ltj0),w(ltk0),w(lti0),
@@ -1256,6 +1304,16 @@ c
      .  ntime,w(lnbl),w(lxkb),w(lnbl),nou,bou,nbuf,ibufdim,myid,
      .  nummem)
 c
+      if (jbcinfo(nbl,nseg,1,1).eq.2036)
+     .  call bc2036(jdim,kdim,idim,w(lq),w(lqj0),w(lqk0),w(lqi0),
+     .  w(lsj),w(lsk),w(lsi),w(lbcj),w(lbck),w(lbci),
+     .  w(lxtbj),w(lxtbk),w(lxtbi),w(latbj),w(latbk),w(latbi),
+     .  ista,iend,jsta,jend,ksta,kend,3,w(lxib),w(ltj0),w(ltk0),w(lti0),
+     .  w(lsnk0),w(lvis),w(lvj0),w(lvk0),w(lvi0),mdim,ndim,w(ldata),
+     .  filname,iuns,jbcinfo(nbl,nseg,1,1),w(lsni0),w(lsnk0),w(lsni0),
+     .  ntime,w(lnbl),w(lxkb),w(lnbl),nou,bou,nbuf,ibufdim,myid,
+     .  nummem)
+c
   804 continue
 c
 c********************
@@ -1523,6 +1581,16 @@ c
 c
       if (jbcinfo(nbl,nseg,1,2).eq.2026)
      .  call bc2026(jdim,kdim,idim,w(lq),w(lqj0),w(lqk0),w(lqi0),
+     .  w(lsj),w(lsk),w(lsi),w(lbcj),w(lbck),w(lbci),
+     .  w(lxtbj),w(lxtbk),w(lxtbi),w(latbj),w(latbk),w(latbi),
+     .  ista,iend,jsta,jend,ksta,kend,4,w(lxib),w(ltj0),w(ltk0),w(lti0),
+     .  w(lsnk0),w(lvis),w(lvj0),w(lvk0),w(lvi0),mdim,ndim,w(ldata),
+     .  filname,iuns,jbcinfo(nbl,nseg,1,2),w(lsni0),w(lsnk0),w(lsni0),
+     .  ntime,w(lnbl),w(lxkb),w(lnbl),nou,bou,nbuf,ibufdim,myid,
+     .  nummem)
+c
+      if (jbcinfo(nbl,nseg,1,2).eq.2036)
+     .  call bc2036(jdim,kdim,idim,w(lq),w(lqj0),w(lqk0),w(lqi0),
      .  w(lsj),w(lsk),w(lsi),w(lbcj),w(lbck),w(lbci),
      .  w(lxtbj),w(lxtbk),w(lxtbi),w(latbj),w(latbk),w(latbi),
      .  ista,iend,jsta,jend,ksta,kend,4,w(lxib),w(ltj0),w(ltk0),w(lti0),
@@ -1806,6 +1874,16 @@ c
      .  ntime,w(lnbl),w(lxkb),w(lnbl),nou,bou,nbuf,ibufdim,myid,
      .  nummem)
 c
+      if (kbcinfo(nbl,nseg,1,1).eq.2036)
+     .  call bc2036(jdim,kdim,idim,w(lq),w(lqj0),w(lqk0),w(lqi0),
+     .  w(lsj),w(lsk),w(lsi),w(lbcj),w(lbck),w(lbci),
+     .  w(lxtbj),w(lxtbk),w(lxtbi),w(latbj),w(latbk),w(latbi),
+     .  ista,iend,jsta,jend,ksta,kend,5,w(lxib),w(ltj0),w(ltk0),w(lti0),
+     .  w(lsnk0),w(lvis),w(lvj0),w(lvk0),w(lvi0),mdim,ndim,w(ldata),
+     .  filname,iuns,kbcinfo(nbl,nseg,1,1),w(lsni0),w(lsnk0),w(lsni0),
+     .  ntime,w(lnbl),w(lxkb),w(lnbl),nou,bou,nbuf,ibufdim,myid,
+     .  nummem)
+c
   806 continue
 c
 c********************
@@ -2073,6 +2151,16 @@ c
 c
       if (kbcinfo(nbl,nseg,1,2).eq.2026)
      .  call bc2026(jdim,kdim,idim,w(lq),w(lqj0),w(lqk0),w(lqi0),
+     .  w(lsj),w(lsk),w(lsi),w(lbcj),w(lbck),w(lbci),
+     .  w(lxtbj),w(lxtbk),w(lxtbi),w(latbj),w(latbk),w(latbi),
+     .  ista,iend,jsta,jend,ksta,kend,6,w(lxib),w(ltj0),w(ltk0),w(lti0),
+     .  w(lsnk0),w(lvis),w(lvj0),w(lvk0),w(lvi0),mdim,ndim,w(ldata),
+     .  filname,iuns,kbcinfo(nbl,nseg,1,2),w(lsni0),w(lsnk0),w(lsni0),
+     .  ntime,w(lnbl),w(lxkb),w(lnbl),nou,bou,nbuf,ibufdim,myid,
+     .  nummem)
+c
+      if (kbcinfo(nbl,nseg,1,2).eq.2036)
+     .  call bc2036(jdim,kdim,idim,w(lq),w(lqj0),w(lqk0),w(lqi0),
      .  w(lsj),w(lsk),w(lsi),w(lbcj),w(lbck),w(lbci),
      .  w(lxtbj),w(lxtbk),w(lxtbi),w(latbj),w(latbk),w(latbi),
      .  ista,iend,jsta,jend,ksta,kend,6,w(lxib),w(ltj0),w(ltk0),w(lti0),

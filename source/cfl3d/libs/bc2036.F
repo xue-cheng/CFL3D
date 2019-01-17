@@ -44,6 +44,11 @@ c              Twtype < 0 (fixed wall temperature = stagnation temp)
 c
 c           2) cq0  = base component of surface jet
 c           3) cqa = amplitude component of surface jet
+c              Set surface jet boundary conditions via mass-flow 
+c              coefficient:
+c                                             (rho * u)_jet
+c              mass-flow coefficient cqt  = ------------------ 
+c                                           (rho * u)_infinity
 c           4) sjetx = direction number for surface jet (x-direction)
 c           5) sjety = direction number for surface jet (y-direction)
 c           6) sjetz = direction number for surface jet (z-direction)
@@ -122,7 +127,6 @@ c..  data statement (for use with wall functions)
       data a2/31.08654, 5.0429072e-02, -2.0072314e-8/
 c   *********
 c
-      twopi = 2.0*pi
       jdim1 = jdim-1
       kdim1 = kdim-1
       idim1 = idim-1
@@ -139,6 +143,16 @@ c            * * * * * * * * * * * * * * * * * * * * * *
 c            * standard boundary condition bctype=2036 *
 c            * * * * * * * * * * * * * * * * * * * * * *
 c
+c******************************************************************************
+c      j=1 boundary        viscous wall with T & cq specified       bctype 2036
+c******************************************************************************
+      if (nface.eq.3) then
+c
+      do 400 i=ista,iend1
+      ii = i-ista+1
+c
+      do 300 k=ksta,kend1
+      kk = k-ksta+1
 c     read data
       cq0           = bcdata(kk,ii,ip,2)
       cqa           = bcdata(kk,ii,ip,3)
@@ -155,95 +169,6 @@ c     read data
      .            ' invalid d_cyc, must between (0, 1)'
             call termn8(myid,-1,ibufdim,nbuf,bou,nou)
       end if
-
-c
-c     compute total (steady and unsteady) surface jet
-c     
-      if (t_cyc .gt. 0) then 
-            t = mod(time, t_cyc)
-      else
-            t = time
-      endif
-
-      if (t_s99 .eq. 0) then 
-            if (t_cyc .eq. 0) then
-                  t_up   = d_cyc
-                  if (t .gt. t_up) then
-                        cqt    = cq0 + cqa
-                  else
-                        cqt    = cq0
-                  endif
-            else
-                  if (t_cyc .gt. 0) then
-                        t_up   = (1.0-d_cyc)*t_cyc/2.0
-                        t_down = (1.0+d_cyc)*t_cyc/2.0
-                  else
-                        t_up   = ccabs(t_cyc)
-                        t_down = t_up + d_cyc
-                  endif
-                  if ((t.gt.t_up).and.(t.lt.t_down)) then
-                        cqt    = cq0 + cqa
-                  else
-                        cqt    = cq0
-                  endif
-            endif
-      else if (t_s99 .gt. 0) then
-            if (t_cyc .eq. 0) then
-                  t_up   = d_cyc
-                  term1  = 1.0 + cctanh(twopi/t_s99*(time-t_up  ))
-                  cqt    = cq0 + 0.5 * cqa * term1 
-            else
-                  if (t_cyc .gt. 0) then
-                        t_up   = (1.0-d_cyc)*t_cyc/2.0
-                        t_down = (1.0+d_cyc)*t_cyc/2.0
-                  else
-                        t_up   = ccabs(t_cyc)
-                        t_down = t_up + d_cyc
-                  endif
-                  term1  = 1.0 + cctanh(twopi/t_s99*(t-t_up  ))
-                  term2  = 1.0 - cctanh(twopi/t_s99*(t-t_down))
-                  cqt    = cq0 + 0.25 * cqa * term1 * term2
-            endif
-      else !t_s99 .lt. 0
-            t_s50 = ccabs(t_s99)/2
-            if (t_cyc .eq. 0) then
-                  t_up   = d_cyc
-                  if (t.lt.t_up-t_s50) then
-                        cqt    = cq0
-                  else if ( t .lt. t_up+t_s50) then
-                        cqt    = cq0+0.5*cqa*(1+(t-t_up)/t_s50)
-                  else
-                        cqt    = cq0 + cqa
-                  endif
-            else
-                  if (t_cyc.gt.0) then
-                        t_up   = (1.0-d_cyc)*t_cyc/2.0
-                        t_down = (1.0+d_cyc)*t_cyc/2.0
-                  else
-                        t_up   = ccabs(t_cyc)
-                        t_down = t_up + d_cyc
-                  endif
-                  if ((t.lt.t_up-t_s50).or.(t.gt.t_down+t_s50)) then 
-                        cqt = cq0
-                  else if (t.lt.t_up+t_s50) then 
-                        cqt = cq0+0.5*cqa*(1+(t-t_up)/t_s50)
-                  else if (t.gt.t_down-t_s50) then
-                        cqt = cq0+0.5*cqa*(1-(t-t_down)/t_s50)
-                  else
-                        cqt = cq0 + cqa
-                  endif
-            endif
-      endif
-c******************************************************************************
-c      j=1 boundary        viscous wall with T & cq specified       bctype 2036
-c******************************************************************************
-      if (nface.eq.3) then
-c
-      do 400 i=ista,iend1
-      ii = i-ista+1
-c
-      do 300 k=ksta,kend1
-      kk = k-ksta+1
       pb            = q(1,k,i,5)
       dpb           = q(2,k,i,5)-q(1,k,i,5)
       pb            = pb - dpb/2.0
@@ -279,6 +204,11 @@ c
       vvb = xtbj(k,i,2,1)
       wwb = xtbj(k,i,3,1)
       end if
+
+c
+c     compute total (steady and unsteady) surface jet
+c
+      cqt = bc2036_cqt(time, cq0, cqa, t_cyc, t_s99, d_cyc)
 
 c     compute direction cosines for surface jet
 c
@@ -517,12 +447,22 @@ c
 c
       do 700 k=ksta,kend1
       kk = k-ksta+1
-      cq            = bcdata(kk,ii,ip,2)
-      cqu           = bcdata(kk,ii,ip,3)
+c     read data
+      cq0           = bcdata(kk,ii,ip,2)
+      cqa           = bcdata(kk,ii,ip,3)
       sjetx         = bcdata(kk,ii,ip,4)
       sjety         = bcdata(kk,ii,ip,5)
       sjetz         = bcdata(kk,ii,ip,6)
-      rfreq         = bcdata(kk,ii,ip,7)
+      t_cyc         = bcdata(kk,ii,ip,7)
+      t_s99         = bcdata(kk,ii,ip,8)
+      d_cyc         = bcdata(kk,ii,ip,9)
+
+      if ((d_cyc.ge.1.).or.(d_cyc.le.0.)) then
+            nou(1) = min(nou(1)+1,ibufdim)
+            write(bou(nou(1),1),*)' stopping in bc2036...',
+     .            ' invalid d_cyc, must between (0, 1)'
+            call termn8(myid,-1,ibufdim,nbuf,bou,nou)
+      end if
       pb            = q(jdim1,k,i,5)
       dpb           = q(jdim1,k,i,5)-q(jdim1-1,k,i,5)
       pb            = pb + dpb/2.0
@@ -558,6 +498,11 @@ c
       vvb = xtbj(k,i,2,2)
       wwb = xtbj(k,i,3,2)
       end if
+
+c
+c     compute total (steady and unsteady) surface jet
+c
+      cqt = bc2036_cqt(time, cq0, cqa, t_cyc, t_s99, d_cyc)
 
 c     compute direction cosines for surface jet
 c
@@ -796,12 +741,22 @@ c
 c
       do 1100 j=jsta,jend1
       jj = j-jsta+1
-      cq            = bcdata(jj,ii,ip,2) 
-      cqu           = bcdata(jj,ii,ip,3)
+c     read data
+      cq0           = bcdata(jj,ii,ip,2)
+      cqa           = bcdata(jj,ii,ip,3)
       sjetx         = bcdata(jj,ii,ip,4)
       sjety         = bcdata(jj,ii,ip,5)
       sjetz         = bcdata(jj,ii,ip,6)
-      rfreq         = bcdata(jj,ii,ip,7)
+      t_cyc         = bcdata(jj,ii,ip,7)
+      t_s99         = bcdata(jj,ii,ip,8)
+      d_cyc         = bcdata(jj,ii,ip,9)
+
+      if ((d_cyc.ge.1.).or.(d_cyc.le.0.)) then
+            nou(1) = min(nou(1)+1,ibufdim)
+            write(bou(nou(1),1),*)' stopping in bc2036...',
+     .            ' invalid d_cyc, must between (0, 1)'
+            call termn8(myid,-1,ibufdim,nbuf,bou,nou)
+      end if
       pb            = q(j,1,i,5)
       dpb           = q(j,2,i,5)-q(j,1,i,5)
       pb            = pb - dpb/2.0
@@ -837,6 +792,11 @@ c
       vvb = xtbk(j,i,2,1)
       wwb = xtbk(j,i,3,1)
       end if
+
+c
+c     compute total (steady and unsteady) surface jet
+c
+      cqt = bc2036_cqt(time, cq0, cqa, t_cyc, t_s99, d_cyc)
 
 c     compute direction cosines for surface jet
 c
@@ -1075,12 +1035,22 @@ c
 c
       do 1500 j=jsta,jend1
       jj = j-jsta+1
-      cq            = bcdata(jj,ii,ip,2) 
-      cqu           = bcdata(jj,ii,ip,3)
+c     read data
+      cq0           = bcdata(jj,ii,ip,2)
+      cqa           = bcdata(jj,ii,ip,3)
       sjetx         = bcdata(jj,ii,ip,4)
       sjety         = bcdata(jj,ii,ip,5)
       sjetz         = bcdata(jj,ii,ip,6)
-      rfreq         = bcdata(jj,ii,ip,7)
+      t_cyc         = bcdata(jj,ii,ip,7)
+      t_s99         = bcdata(jj,ii,ip,8)
+      d_cyc         = bcdata(jj,ii,ip,9)
+
+      if ((d_cyc.ge.1.).or.(d_cyc.le.0.)) then
+            nou(1) = min(nou(1)+1,ibufdim)
+            write(bou(nou(1),1),*)' stopping in bc2036...',
+     .            ' invalid d_cyc, must between (0, 1)'
+            call termn8(myid,-1,ibufdim,nbuf,bou,nou)
+      end if
       pb            = q(j,kdim1,i,5)
       dpb           = q(j,kdim1,i,5)-q(j,kdim1-1,i,5)
       pb            = pb + dpb/2.0
@@ -1116,6 +1086,11 @@ c
       vvb = xtbk(j,i,2,2)
       wwb = xtbk(j,i,3,2)
       end if
+
+c
+c     compute total (steady and unsteady) surface jet
+c
+      cqt = bc2036_cqt(time, cq0, cqa, t_cyc, t_s99, d_cyc)
 
 c     compute direction cosines for surface jet
 c
@@ -1354,12 +1329,22 @@ c
 c
       do 1900 j=jsta,jend1
       jj = j-jsta+1
-      cq            = bcdata(jj,kk,ip,2) 
-      cqu           = bcdata(jj,kk,ip,3)
+c     read data
+      cq0           = bcdata(jj,kk,ip,2)
+      cqa           = bcdata(jj,kk,ip,3)
       sjetx         = bcdata(jj,kk,ip,4)
       sjety         = bcdata(jj,kk,ip,5)
       sjetz         = bcdata(jj,kk,ip,6)
-      rfreq         = bcdata(jj,kk,ip,7)
+      t_cyc         = bcdata(jj,kk,ip,7)
+      t_s99         = bcdata(jj,kk,ip,8)
+      d_cyc         = bcdata(jj,kk,ip,9)
+
+      if ((d_cyc.ge.1.).or.(d_cyc.le.0.)) then
+            nou(1) = min(nou(1)+1,ibufdim)
+            write(bou(nou(1),1),*)' stopping in bc2036...',
+     .            ' invalid d_cyc, must between (0, 1)'
+            call termn8(myid,-1,ibufdim,nbuf,bou,nou)
+      end if
       pb            = q(j,k,1,5)
       dpb           = q(j,k,2,5)-q(j,k,1,5)
       pb            = pb - dpb/2.0
@@ -1395,6 +1380,11 @@ c
       vvb = xtbi(j,k,2,1)
       wwb = xtbi(j,k,3,1)
       end if
+
+c
+c     compute total (steady and unsteady) surface jet
+c
+      cqt = bc2036_cqt(time, cq0, cqa, t_cyc, t_s99, d_cyc)
 
 c     compute direction cosines for surface jet
 c
@@ -1633,12 +1623,22 @@ c
 c
       do 2300 j=jsta,jend1
       jj = j-jsta+1
-      cq            = bcdata(jj,kk,ip,2)
-      cqu           = bcdata(jj,kk,ip,3)
+c     read data
+      cq0           = bcdata(jj,kk,ip,2)
+      cqa           = bcdata(jj,kk,ip,3)
       sjetx         = bcdata(jj,kk,ip,4)
       sjety         = bcdata(jj,kk,ip,5)
       sjetz         = bcdata(jj,kk,ip,6)
-      rfreq         = bcdata(jj,kk,ip,7)
+      t_cyc         = bcdata(jj,kk,ip,7)
+      t_s99         = bcdata(jj,kk,ip,8)
+      d_cyc         = bcdata(jj,kk,ip,9)
+
+      if ((d_cyc.ge.1.).or.(d_cyc.le.0.)) then
+            nou(1) = min(nou(1)+1,ibufdim)
+            write(bou(nou(1),1),*)' stopping in bc2036...',
+     .            ' invalid d_cyc, must between (0, 1)'
+            call termn8(myid,-1,ibufdim,nbuf,bou,nou)
+      end if
       pb            = q(j,k,idim1,5)
       dpb           = q(j,k,idim1,5)-q(j,k,idim1-1,5)
       pb            = pb + dpb/2.0
@@ -1674,6 +1674,11 @@ c
       vvb = xtbi(j,k,2,2)
       wwb = xtbi(j,k,3,2)
       end if
+
+c
+c     compute total (steady and unsteady) surface jet
+c
+      cqt = bc2036_cqt(time, cq0, cqa, t_cyc, t_s99, d_cyc)
 
 c     compute direction cosines for surface jet
 c
@@ -1901,5 +1906,91 @@ c           bc2024 -> d(gamma)/dn=-(bcdata(3))*rho/mu*Uedge:
       end if
       end if
 c
+      return
+      end
+
+#ifdef CMPLX
+      complex function bc2036_cqt(time, cq0, cqa, t_cyc, t_s99, d_cyc)
+      implicit complex(a-h,o-z)
+#else
+      function bc2036_cqt(time, cq0, cqa, t_cyc, t_s99, d_cyc)
+#endif
+
+      twopi = 2.0*acos(-1.0)
+      if (t_cyc .gt. 0) then 
+            t = mod(time, t_cyc)
+      else
+            t = time
+      endif
+      if (t_s99 .eq. 0) then 
+            if (t_cyc .eq. 0) then
+                  t_up   = d_cyc
+                  if (t .gt. t_up) then
+                        cqt    = cq0 + cqa
+                  else
+                        cqt    = cq0
+                  endif
+            else
+                  if (t_cyc .gt. 0) then
+                        t_up   = (1.0-d_cyc)*t_cyc/2.0
+                        t_down = (1.0+d_cyc)*t_cyc/2.0
+                  else
+                        t_up   = ccabs(t_cyc)
+                        t_down = t_up + d_cyc
+                  endif
+                  if ((t.gt.t_up).and.(t.lt.t_down)) then
+                        cqt    = cq0 + cqa
+                  else
+                        cqt    = cq0
+                  endif
+            endif
+      else if (t_s99 .gt. 0) then
+            if (t_cyc .eq. 0) then
+                  t_up   = d_cyc
+                  term1  = 1.0 + cctanh(twopi/t_s99*(time-t_up  ))
+                  cqt    = cq0 + 0.5 * cqa * term1 
+            else
+                  if (t_cyc .gt. 0) then
+                        t_up   = (1.0-d_cyc)*t_cyc/2.0
+                        t_down = (1.0+d_cyc)*t_cyc/2.0
+                  else
+                        t_up   = ccabs(t_cyc)
+                        t_down = t_up + d_cyc
+                  endif
+                  term1  = 1.0 + cctanh(twopi/t_s99*(t-t_up  ))
+                  term2  = 1.0 - cctanh(twopi/t_s99*(t-t_down))
+                  cqt    = cq0 + 0.25 * cqa * term1 * term2
+            endif
+      else !t_s99 .lt. 0
+            t_s50 = ccabs(t_s99)/2
+            if (t_cyc .eq. 0) then
+                  t_up   = d_cyc
+                  if (t.lt.t_up-t_s50) then
+                        cqt    = cq0
+                  else if ( t .lt. t_up+t_s50) then
+                        cqt    = cq0+0.5*cqa*(1+(t-t_up)/t_s50)
+                  else
+                        cqt    = cq0 + cqa
+                  endif
+            else
+                  if (t_cyc.gt.0) then
+                        t_up   = (1.0-d_cyc)*t_cyc/2.0
+                        t_down = (1.0+d_cyc)*t_cyc/2.0
+                  else
+                        t_up   = ccabs(t_cyc)
+                        t_down = t_up + d_cyc
+                  endif
+                  if ((t.lt.t_up-t_s50).or.(t.gt.t_down+t_s50)) then 
+                        cqt = cq0
+                  else if (t.lt.t_up+t_s50) then 
+                        cqt = cq0+0.5*cqa*(1+(t-t_up)/t_s50)
+                  else if (t.gt.t_down-t_s50) then
+                        cqt = cq0+0.5*cqa*(1-(t-t_down)/t_s50)
+                  else
+                        cqt = cq0 + cqa
+                  endif
+            endif
+      endif
+      bc2036_cqt = cqt
       return
       end

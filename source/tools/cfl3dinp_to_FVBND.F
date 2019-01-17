@@ -145,7 +145,8 @@ c  Grid i0 section:
           read(2,*) ig,is,ib,i1,i2,i3,i4,nd
 c  *** write to fvbnd file ***
           if (abs(ib) .eq. 2004 .or. abs(ib) .eq. 2014 .or.
-     +        abs(ib) .eq. 2024 .or. abs(ib) .eq. 2016) then
+     +        abs(ib) .eq. 2024 .or. abs(ib) .eq. 2016 .or.
+     +        abs(ib) .eq. 2036) then
             ibd=1
             indx0=1
             izero=0
@@ -176,7 +177,8 @@ c  Grid idim section:
           read(2,*) ig,is,ib,i1,i2,i3,i4,nd
 c  *** write to fvbnd file ***
           if (abs(ib) .eq. 2004 .or. abs(ib) .eq. 2014 .or.
-     +        abs(ib) .eq. 2024 .or. abs(ib) .eq. 2016) then
+     +        abs(ib) .eq. 2024 .or. abs(ib) .eq. 2016 .or.
+     +        abs(ib) .eq. 2036) then
             ibd=1
             indx0=idx(n)
             izero=0
@@ -207,7 +209,8 @@ c  Grid j0 section:
           read(2,*) ig,is,ib,i1,i2,i3,i4,nd
 c  *** write to fvbnd file ***
           if (abs(ib) .eq. 2004 .or. abs(ib) .eq. 2014 .or.
-     +        abs(ib) .eq. 2024 .or. abs(ib) .eq. 2016) then
+     +        abs(ib) .eq. 2024 .or. abs(ib) .eq. 2016 .or.
+     +        abs(ib) .eq. 2036) then
             ibd=1
             indx0=1
             izero=0
@@ -238,7 +241,8 @@ c  Grid jdim section:
           read(2,*) ig,is,ib,i1,i2,i3,i4,nd
 c  *** write to fvbnd file ***
           if (abs(ib) .eq. 2004 .or. abs(ib) .eq. 2014 .or.
-     +        abs(ib) .eq. 2024 .or. abs(ib) .eq. 2016) then
+     +        abs(ib) .eq. 2024 .or. abs(ib) .eq. 2016 .or.
+     +        abs(ib) .eq. 2036) then
             ibd=1
             indx0=jdx(n)
             izero=0
@@ -269,7 +273,8 @@ c  Grid k0 section:
           read(2,*) ig,is,ib,i1,i2,i3,i4,nd
 c  *** write to fvbnd file ***
           if (abs(ib) .eq. 2004 .or. abs(ib) .eq. 2014 .or.
-     +        abs(ib) .eq. 2024 .or. abs(ib) .eq. 2016) then
+     +        abs(ib) .eq. 2024 .or. abs(ib) .eq. 2016 .or.
+     +        abs(ib) .eq. 2036) then
             ibd=1
             indx0=1
             izero=0
@@ -300,7 +305,8 @@ c  Grid kdim section:
           read(2,*) ig,is,ib,i1,i2,i3,i4,nd
 c  *** write to fvbnd file ***
           if (abs(ib) .eq. 2004 .or. abs(ib) .eq. 2014 .or.
-     +        abs(ib) .eq. 2024 .or. abs(ib) .eq. 2016) then
+     +        abs(ib) .eq. 2024 .or. abs(ib) .eq. 2016 .or.
+     +        abs(ib) .eq. 2036) then
             ibd=1
             indx0=kdx(n)
             izero=0

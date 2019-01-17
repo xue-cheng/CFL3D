@@ -186,7 +186,8 @@ c
      .    abs(kbcinfo(nbl,ns,1,kk)).eq.2014 .or.
      .    abs(kbcinfo(nbl,ns,1,kk)).eq.2024 .or.
      .    abs(kbcinfo(nbl,ns,1,kk)).eq.2034 .or.
-     .    abs(kbcinfo(nbl,ns,1,kk)).eq.2016)) then
+     .    abs(kbcinfo(nbl,ns,1,kk)).eq.2016 .or.
+     .    abs(kbcinfo(nbl,ns,1,kk)).eq.2036)) then
          dcxp  = dcx
          dcyp  = dcy
          dczp  = dcz
@@ -317,7 +318,8 @@ c
      .    abs(jbcinfo(nbl,ns,1,jj)).eq.2014 .or.
      .    abs(jbcinfo(nbl,ns,1,jj)).eq.2024 .or.
      .    abs(jbcinfo(nbl,ns,1,jj)).eq.2034 .or.
-     .    abs(jbcinfo(nbl,ns,1,jj)).eq.2016)) then
+     .    abs(jbcinfo(nbl,ns,1,jj)).eq.2016 .or.
+     .    abs(jbcinfo(nbl,ns,1,jj)).eq.2036)) then
          dcxp  = dcx
          dcyp  = dcy
          dczp  = dcz
@@ -448,7 +450,8 @@ c
      .    abs(ibcinfo(nbl,ns,1,ii)).eq.2014 .or.
      .    abs(ibcinfo(nbl,ns,1,ii)).eq.2024 .or.
      .    abs(ibcinfo(nbl,ns,1,ii)).eq.2034 .or.
-     .    abs(ibcinfo(nbl,ns,1,ii)).eq.2016)) then
+     .    abs(ibcinfo(nbl,ns,1,ii)).eq.2016 .or.
+     .    abs(ibcinfo(nbl,ns,1,ii)).eq.2036)) then
          dcxp  = dcx
          dcyp  = dcy
          dczp  = dcz

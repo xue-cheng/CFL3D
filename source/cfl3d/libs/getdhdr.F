@@ -155,12 +155,14 @@ c
 c
       if (abs(ibctyp).eq.2016) then
          datahdr(1)  = '   tw/tinf'
-         datahdr(2)  = '        cq'
-         datahdr(3)  = '       cqu'
+         datahdr(2)  = '       cq0'
+         datahdr(3)  = '       cqa'
          datahdr(4)  = '     sjetx'
          datahdr(5)  = '     sjety'
          datahdr(6)  = '     sjetz'
-         datahdr(7)  = '     rfreq'
+         datahdr(7)  = '     t_cyc'
+         datahdr(8)  = '     t_s99'
+         datahdr(9)  = '     d_cyc'
       end if
 c
       if (abs(ibctyp).eq.2026) then
@@ -179,6 +181,16 @@ c
          if (abs(ndata).gt.10) then
             datahdr(11)  = '     turb2'
          end if
+      end if
+c
+      if (abs(ibctyp).eq.2036) then
+         datahdr(1)  = '   tw/tinf'
+         datahdr(2)  = '        cq'
+         datahdr(3)  = '       cqu'
+         datahdr(4)  = '     sjetx'
+         datahdr(5)  = '     sjety'
+         datahdr(6)  = '     sjetz'
+         datahdr(7)  = '     rfreq'
       end if
 c
       if (ibctyp.eq.2018) then

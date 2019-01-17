@@ -196,7 +196,7 @@ c
 c
                if(abs(nbctype).eq.2004 .or. abs(nbctype).eq.2014 .or.
      .            abs(nbctype).eq.2024 .or. abs(nbctype).eq.2034 .or.
-     .            abs(nbctype).eq.2016) then
+     .            abs(nbctype).eq.2016 .or. abs(nbctype).eq.2036) then
 c
                   if (myid .eq. mblk2nd(nbl)) then
                      if (ivmx .eq.4 .or. ivmx.eq.25) then
@@ -311,7 +311,7 @@ c
 c
                if(abs(nbctype).eq.2004 .or. abs(nbctype).eq.2014 .or.
      .            abs(nbctype).eq.2024 .or. abs(nbctype).eq.2034 .or.
-     .            abs(nbctype).eq.2016) then
+     .            abs(nbctype).eq.2016 .or. abs(nbctype).eq.2036) then
 c
                   if (myid .eq. mblk2nd(nbl)) then
                      if (ivmx .eq.4 .or. ivmx.eq.25) then
@@ -426,7 +426,7 @@ c
 c
                if(abs(nbctype).eq.2004 .or. abs(nbctype).eq.2014 .or.
      .            abs(nbctype).eq.2024 .or. abs(nbctype).eq.2034 .or.
-     .            abs(nbctype).eq.2016) then
+     .            abs(nbctype).eq.2016 .or. abs(nbctype).eq.2036) then
 c
                   if (myid .eq. mblk2nd(nbl)) then
                      if (ivmx .eq.4 .or. ivmx.eq.25) then

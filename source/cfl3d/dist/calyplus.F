@@ -189,7 +189,8 @@ c
      .       abs(kbcinfo(nbl,nseg,1,m)) .eq. 2014 .or.
      .       abs(kbcinfo(nbl,nseg,1,m)) .eq. 2024 .or.
      .       abs(kbcinfo(nbl,nseg,1,m)) .eq. 2034 .or.
-     .       abs(kbcinfo(nbl,nseg,1,m)) .eq. 2016) then
+     .       abs(kbcinfo(nbl,nseg,1,m)) .eq. 2016 .or. 
+     .       abs(kbcinfo(nbl,nseg,1,m)) .eq. 2036) then
 c
             iflag = 1
 c
@@ -654,7 +655,8 @@ c
      .       abs(jbcinfo(nbl,nseg,1,m)) .eq. 2014 .or.
      .       abs(jbcinfo(nbl,nseg,1,m)) .eq. 2024 .or.
      .       abs(jbcinfo(nbl,nseg,1,m)) .eq. 2034 .or.
-     .       abs(jbcinfo(nbl,nseg,1,m)) .eq. 2016) then
+     .       abs(jbcinfo(nbl,nseg,1,m)) .eq. 2016 .or. 
+     .       abs(jbcinfo(nbl,nseg,1,m)) .eq. 2036) then
 c
             iflag = 1
 c
@@ -1124,7 +1126,8 @@ c
      .       abs(ibcinfo(nbl,nseg,1,m)) .eq. 2014 .or.
      .       abs(ibcinfo(nbl,nseg,1,m)) .eq. 2024 .or.
      .       abs(ibcinfo(nbl,nseg,1,m)) .eq. 2034 .or.
-     .       abs(ibcinfo(nbl,nseg,1,m)) .eq. 2016) then
+     .       abs(ibcinfo(nbl,nseg,1,m)) .eq. 2016 .or. 
+     .       abs(ibcinfo(nbl,nseg,1,m)) .eq. 2036) then
 c
             iflag = 1
 c

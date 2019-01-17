@@ -1519,6 +1519,7 @@ c
      .       abs(ibctyp).ne.2024 .and.
      .       abs(ibctyp).ne.2034 .and.
      .       abs(ibctyp).ne.2016 .and.
+     .       abs(ibctyp).ne.2036 .and.
      .       abs(ibctyp).ne.1005 .and.
      .       abs(ibctyp).ne.1006) then 
              js = ibcinfo(nbl,nseg,2,ii)
@@ -1564,6 +1565,7 @@ c
      .       abs(ibctyp).ne.2024 .and.
      .       abs(ibctyp).ne.2034 .and.
      .       abs(ibctyp).ne.2016 .and.
+     .       abs(ibctyp).ne.2036 .and.
      .       abs(ibctyp).ne.1005 .and.
      .       abs(ibctyp).ne.1006) then
              js = ibcinfo(nbl,nseg,2,ii)
@@ -1688,6 +1690,7 @@ c
      .         abs(jbctyp).ne.2024 .and.
      .         abs(jbctyp).ne.2034 .and.
      .         abs(jbctyp).ne.2016 .and.
+     .         abs(jbctyp).ne.2036 .and.
      .         abs(jbctyp).ne.1005 .and.
      .         abs(jbctyp).ne.1006) then
                is = jbcinfo(nbl,nseg,2,jj)
@@ -1733,6 +1736,7 @@ c
      .         abs(jbctyp).ne.2024 .and.
      .         abs(jbctyp).ne.2034 .and.
      .         abs(jbctyp).ne.2016 .and.
+     .         abs(jbctyp).ne.2036 .and.
      .         abs(jbctyp).ne.1005 .and.
      .         abs(jbctyp).ne.1006) then
                is = jbcinfo(nbl,nseg,2,jj)
@@ -1813,6 +1817,7 @@ c
      .         abs(kbctyp).ne.2024 .and.
      .         abs(kbctyp).ne.2034 .and.
      .         abs(kbctyp).ne.2016 .and.
+     .         abs(kbctyp).ne.2036 .and.
      .         abs(kbctyp).ne.1005 .and.
      .         abs(kbctyp).ne.1006) then
                is = kbcinfo(nbl,nseg,2,kk)
@@ -1858,6 +1863,7 @@ c
      .         abs(kbctyp).ne.2024 .and.
      .         abs(kbctyp).ne.2034 .and.
      .         abs(kbctyp).ne.2016 .and.
+     .         abs(kbctyp).ne.2036 .and.
      .         abs(kbctyp).ne.1005 .and.
      .         abs(kbctyp).ne.1006) then
                is = kbcinfo(nbl,nseg,2,kk)

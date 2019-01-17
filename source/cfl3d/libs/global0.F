@@ -203,7 +203,7 @@ c
          if (abs(ibctyp).eq.2004 .or. abs(ibctyp).eq.1005 .or.
      .       abs(ibctyp).eq.1006 .or. abs(ibctyp).eq.2014 .or.
      .       abs(ibctyp).eq.2024 .or. abs(ibctyp).eq.2034 .or.
-     .       abs(ibctyp).eq.2016) then
+     .       abs(ibctyp).eq.2016 .or. abs(ibctyp).eq.2036) then
             nsol   = nsol + 1
             nsolgd = nsolgd + 1
          end if
@@ -225,7 +225,7 @@ c
          if (abs(ibctyp).eq.2004 .or. abs(ibctyp).eq.1005 .or.
      .       abs(ibctyp).eq.1006 .or. abs(ibctyp).eq.2014 .or.
      .       abs(ibctyp).eq.2024 .or. abs(ibctyp).eq.2034 .or.
-     .       abs(ibctyp).eq.2016) then
+     .       abs(ibctyp).eq.2016 .or. abs(ibctyp).eq.2036) then
             nsol   = nsol + 1
             nsolgd = nsolgd + 1
          end if
@@ -247,7 +247,7 @@ c
          if (abs(ibctyp).eq.2004 .or. abs(ibctyp).eq.1005 .or.
      .       abs(ibctyp).eq.1006 .or. abs(ibctyp).eq.2014 .or.
      .       abs(ibctyp).eq.2024 .or. abs(ibctyp).eq.2034 .or.
-     .       abs(ibctyp).eq.2016) then
+     .       abs(ibctyp).eq.2016 .or. abs(ibctyp).eq.2036) then
             nsol   = nsol + 1
             nsolgd = nsolgd + 1
          end if
@@ -269,7 +269,7 @@ c
          if (abs(ibctyp).eq.2004 .or. abs(ibctyp).eq.1005 .or.
      .       abs(ibctyp).eq.1006 .or. abs(ibctyp).eq.2014 .or.
      .       abs(ibctyp).eq.2024 .or. abs(ibctyp).eq.2034 .or.
-     .       abs(ibctyp).eq.2016) then
+     .       abs(ibctyp).eq.2016 .or. abs(ibctyp).eq.2036) then
             nsol   = nsol + 1
             nsolgd = nsolgd + 1
          end if
@@ -291,7 +291,7 @@ c
          if (abs(ibctyp).eq.2004 .or. abs(ibctyp).eq.1005 .or.
      .       abs(ibctyp).eq.1006 .or. abs(ibctyp).eq.2014 .or.
      .       abs(ibctyp).eq.2024 .or. abs(ibctyp).eq.2034 .or.
-     .       abs(ibctyp).eq.2016) then
+     .       abs(ibctyp).eq.2016 .or. abs(ibctyp).eq.2036) then
             nsol   = nsol + 1
             nsolgd = nsolgd + 1
          end if
@@ -313,7 +313,7 @@ c
          if (abs(ibctyp).eq.2004 .or. abs(ibctyp).eq.1005 .or.
      .       abs(ibctyp).eq.1006 .or. abs(ibctyp).eq.2014 .or.
      .       abs(ibctyp).eq.2024 .or. abs(ibctyp).eq.2034 .or.
-     .       abs(ibctyp).eq.2016) then
+     .       abs(ibctyp).eq.2016 .or. abs(ibctyp).eq.2036) then
             nsol   = nsol + 1
             nsolgd = nsolgd + 1
          end if
