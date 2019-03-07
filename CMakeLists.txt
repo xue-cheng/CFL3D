@@ -87,7 +87,6 @@ if(BUILD_MPI)
       if(WITH_FASTIO)
         set_property(TARGET mpi APPEND PROPERTY INTERFACE_COMPILE_DEFINITIONS "FASTIO")
       endif(WITH_FASTIO)
-    endif(WIN32)
   else(MPI_Fortran_FOUND)
     ## FAST-io
     if(WITH_FASTIO)
@@ -96,6 +95,7 @@ if(BUILD_MPI)
     endif(WITH_FASTIO)
     set(BUILD_MPI OFF CACHE BOOL "build MPI versions of CFL3D" FORCE) # set the MPI N/A
   endif(MPI_Fortran_FOUND)
+  endif(WIN32)
   
 endif(BUILD_MPI)
 
