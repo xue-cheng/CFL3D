@@ -5,6 +5,12 @@ project(CFL3D
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Cmake Build type")
+endif(NOT CMAKE_BUILD_TYPE)
+if(WIN32)
+    message(FATAL_ERROR "Windows is not supported, CFL3D can be compiled in WSL.")
+endif(WIN32)
 ###########################################################################
 # Options
 option(SINGLE_PRECISION  "create single precision executables." OFF)
@@ -61,32 +67,30 @@ endif(WITH_CGNS)
 
 # MPI
 if(BUILD_MPI)
-  if(WIN32)
-    message(FATAL_ERROR "Windows is not supported, CFL3D can be compiled in WSL.")
-  else(WIN32)
-    find_package(MPI 1.0 REQUIRED)
-    if(MPI_Fortran_FOUND)
-      add_library(mpi STATIC IMPORTED)
-      set_property(TARGET mpi PROPERTY 
-        INTERFACE_INCLUDE_DIRECTORIES ${MPI_Fortran_INCLUDE_PATH})
-      #message("Choose the first element of libs: ${MPI_Fortran_LIBRARIES}")
-      set(other_elems ${MPI_Fortran_LIBRARIES})
-      list(GET other_elems 0 first_elem)
-      list(REMOVE_AT other_elems 0)
-      set_property(TARGET mpi PROPERTY 
-        IMPORTED_LOCATION ${first_elem})
-      set_property(TARGET mpi PROPERTY 
-        INTERFACE_LINK_LIBRARIES ${other_elems})
-      set_property(TARGET mpi APPEND PROPERTY 
-        INTERFACE_COMPILE_DEFINITIONS "DIST_MPI")
-      set_property(TARGET mpi APPEND PROPERTY 
-        LINK_FLAGS "${MPI_Fortran_LINK_FLAGS}")
-      set_property(TARGET mpi APPEND PROPERTY 
-        INTERFACE_COMPILE_OPTIONS "${MPI_Fortran_COMPILE_FLAGS}")
-      ## FAST-io
-      if(WITH_FASTIO)
-        set_property(TARGET mpi APPEND PROPERTY INTERFACE_COMPILE_DEFINITIONS "FASTIO")
-      endif(WITH_FASTIO)
+  
+  find_package(MPI 1.0 REQUIRED)
+  if(MPI_Fortran_FOUND)
+    add_library(mpi STATIC IMPORTED)
+    set_property(TARGET mpi PROPERTY 
+      INTERFACE_INCLUDE_DIRECTORIES ${MPI_Fortran_INCLUDE_PATH})
+    #message("Choose the first element of libs: ${MPI_Fortran_LIBRARIES}")
+    set(other_elems ${MPI_Fortran_LIBRARIES})
+    list(GET other_elems 0 first_elem)
+    list(REMOVE_AT other_elems 0)
+    set_property(TARGET mpi PROPERTY 
+      IMPORTED_LOCATION ${first_elem})
+    set_property(TARGET mpi PROPERTY 
+      INTERFACE_LINK_LIBRARIES ${other_elems})
+    set_property(TARGET mpi APPEND PROPERTY 
+      INTERFACE_COMPILE_DEFINITIONS "DIST_MPI")
+    set_property(TARGET mpi APPEND PROPERTY 
+      LINK_FLAGS "${MPI_Fortran_LINK_FLAGS}")
+    set_property(TARGET mpi APPEND PROPERTY 
+      INTERFACE_COMPILE_OPTIONS "${MPI_Fortran_COMPILE_FLAGS}")
+    ## FAST-io
+    if(WITH_FASTIO)
+      set_property(TARGET mpi APPEND PROPERTY INTERFACE_COMPILE_DEFINITIONS "FASTIO")
+    endif(WITH_FASTIO)
   else(MPI_Fortran_FOUND)
     ## FAST-io
     if(WITH_FASTIO)
@@ -95,7 +99,6 @@ if(BUILD_MPI)
     endif(WITH_FASTIO)
     set(BUILD_MPI OFF CACHE BOOL "build MPI versions of CFL3D" FORCE) # set the MPI N/A
   endif(MPI_Fortran_FOUND)
-  endif(WIN32)
   
 endif(BUILD_MPI)
 
