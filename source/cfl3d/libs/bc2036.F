@@ -35,7 +35,7 @@ c***********************************************************************
 c     Purpose:  Set solid wall BC (viscous wall)
 c               with 9 pieces of auxiliary data:
 c
-c     This is a mod to bc2004, by Hal Carlson
+c     This is a mod to bc2016, by Cheng Xue
 c
 c           1) Twtype:
 c              Twtype > 0 (fixed wall temperature Tw/Tinf = Twtype)
