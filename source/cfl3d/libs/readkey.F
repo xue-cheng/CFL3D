@@ -516,7 +516,7 @@ c     when reached, causes it to be reset to tur2cut
       nkey     = nkey + 1
 c
 c     full Navier-Stokes
-      ifullns = 0
+      ifullns = 1
       nkey     = nkey + 1
 c
 c     beta8 parameter in k-enstrophy model
