@@ -1314,7 +1314,6 @@ c
       elseif (ides .ge. 10) then 
 c     IDDES
       fws = 0.424
-      PsiCoef = cb1/(cw1*akarman*akarman*fws)
       do i=1,idim-1
         do j=1,jdim-1
           do k=1,kdim-1
@@ -1354,60 +1353,14 @@ c     IDDES
 c Low-Re correction
 c Psi^2 = ccmin(100, Psi^2)
 cc Calculate fw ft2 fv1 fv2
-            ss=vor(j,k,i)
-            if (isar .eq. 1) then
-              s11 = ux(j,k,i,1)
-              s22 = ux(j,k,i,5)
-              s33 = ux(j,k,i,9)
-              s12 = 0.5*(ux(j,k,i,2) + ux(j,k,i,4))
-              s13 = 0.5*(ux(j,k,i,3) + ux(j,k,i,7))
-              s23 = 0.5*(ux(j,k,i,6) + ux(j,k,i,8))
-              xis = s11*s11 + s22*s22 + s33*s33 +
-     +              2.*s12*s12 + 2.*s13*s13 + 2.*s23*s23
-              xisabs = sqrt(2.*xis)
-              ss=vor(j,k,i)+crot*ccminrc(0.,xisabs-vor(j,k,i))
-            end if
-            chi=turre(j,k,i)/fnu(j,k,i)
-            if (i_saneg .ne. 1) then
-              fv1=chi**3/(chi**3+cv1**3)                  !fv1
-              fv2=1.-(chi/(1.+chi*fv1))                   !fv2
-              sst=ss+turre(j,k,i)*fv2/(re*(akarman*damp1(j,k,i))**2)
-              sst=ccmax(sst,xminn)
-              rr=turre(j,k,i)/(sst*re*(akarman*damp1(j,k,i))**2)
-              rr=ccmincr(rr,10.)
-              gg=rr+cw2*(rr**6-rr)
-              gg=ccmax(gg,xminn)
-              fw=gg*((1.+cw3**6)/(gg**6+cw3**6))**(1./6.) !fw
-              ft2=ct3*exp(-ct4*chi**2)                    !ft2
-            else if (i_saneg.eq.1 .and. real(turre(j,k,i)).ge.0.) 
-     +        then 
-c   Alternative to clipping sst (Allmaras et al., ICCFD7-1902):
-              fv1=chi**3/(chi**3+cv1**3)                  !fv1
-              fv2=1.-(chi/(1.+chi*fv1))                   !fv2
-              sst=ss+turre(j,k,i)*fv2/(re*(akarman*damp1(j,k,i))**2)
-              sbar=turre(j,k,i)*fv2/(re*(akarman*damp1(j,k,i))**2)
-              if (real(sbar) .ge. -0.7*real(ss)) then
-                sst=ss+sbar
-              else
-                sst=ss+( ss*(0.7*0.7*ss+0.9*sbar) /
-     +                   ((0.9-2.*0.7)*ss-sbar) )
-              end if
-              if (sst .eq. 0.) then
-                rr=10.
-              else
-                rr=turre(j,k,i)/(sst*re*(akarman*damp1(j,k,i))**2)
-                rr=ccmincr(rr,10.)
-              end if
-              gg=rr+cw2*(rr**6-rr)
-              gg=ccmax(gg,xminn)
-              fw=gg*((1.+cw3**6)/(gg**6+cw3**6))**(1./6.)
-              ft2=ct3*exp(-ct4*chi**2)
-            end if
-c fws = 0.424
-c Psi^2 = (1 - cb1/(cw1*akarman**2*fws)*(ft2-(1-ft2)*fv2))/fv1(1-ft2)
-            Psi2 = (1-PsiCoef*(ft2+(1.-ft2)/fv2)) /
-     /             (fv1*ccmaxrc(1e-10, 1-ft2))
-            Psi2 = ccmaxrc(1., ccminrc(100., Psi2))
+            fv1=chi**3/(chi**3+cv1**3)                  !fv1
+            fv2=1.-(chi/(1.+chi*fv1))                   !fv2
+            ft2=ct3*exp(-ct4*chi**2)
+c Psi^2 = (1 - cb1/(cw1*akarman**2*fws)*(ft2+(1-ft2)*fv2))/fv1(1-ft2)
+            Psi2 = (1. - cb1/(cw1*akarman*akarman*fws) *
+     *             (ft2+(1.-ft2)*fv2)) /
+     /             (fv1*ccmaxrc(1e-10, 1.0 -ft2))
+            Psi2 = ccminrc(100., Psi2)
             Psi = sqrt(Psi2)
             fe2 = 1.0 - ccmax(ft, fl)
             if(real(ra) .ge. 0.0) then
