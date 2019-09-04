@@ -100,7 +100,8 @@ FSRC_LIBS = \
         ffluxv1.F      sijrate2d.F    threeeqn.F     lesdiag.F \
         sijrate3d.F    foureqn.F      bc2026.F       bc2019.F \
         u_doubleprime.F bc2010.F	    bc2036.F
-F90SRC_LIBS = module_profileout.F90 module_contour.F90  module_kwstm.F90 module_stm_2005.F90
+F90SRC_LIBS = module_profileout.F90 module_contour.F90  module_kwstm.F90 module_stm_2005.F90 \
+	module_gust.F90 bspline_kinds_module.F90 .F90 bspline_oo_module.F90 bspline_sub_module.F90
 
 FSRC_SPEC = addx.F
 

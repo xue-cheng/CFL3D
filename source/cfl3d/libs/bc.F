@@ -491,7 +491,7 @@ c
      .  w(lxtbj),w(lxtbk),w(lxtbi),w(latbj),w(latbk),w(latbi),
      .  ista,iend,jsta,jend,ksta,kend,1,w(lxib),w(ltj0),w(ltk0),w(lti0),
      .  w(lvis),w(lvj0),w(lvk0),w(lvi0),iuns,nou,bou,nbuf,ibufdim,
-     .  nummem)
+     .  nummem,w(lx),w(ly),w(lz),nbl,myid)
 c     noninertial boundary conditions
       if (ibcinfo(nbl,nseg,1,1).eq.1000.and.noninflag.gt.0) then
         call bcnonin(jdim,kdim,idim,w(lq),w(lqj0),w(lqk0),w(lqi0),
@@ -776,7 +776,7 @@ c
      .  w(lxtbj),w(lxtbk),w(lxtbi),w(latbj),w(latbk),w(latbi),
      .  ista,iend,jsta,jend,ksta,kend,2,w(lxib),w(ltj0),w(ltk0),w(lti0),
      .  w(lvis),w(lvj0),w(lvk0),w(lvi0),iuns,nou,bou,nbuf,ibufdim,
-     .  nummem)
+     .  nummem,w(lx),w(ly),w(lz),nbl)
 c     noninertial boundary conditions
       if (ibcinfo(nbl,nseg,1,2).eq.1000.and.noninflag.gt.0) then
         call bcnonin(jdim,kdim,idim,w(lq),w(lqj0),w(lqk0),w(lqi0),
@@ -1061,7 +1061,7 @@ c
      .  w(lxtbj),w(lxtbk),w(lxtbi),w(latbj),w(latbk),w(latbi),
      .  ista,iend,jsta,jend,ksta,kend,3,w(lxib),w(ltj0),w(ltk0),w(lti0),
      .  w(lvis),w(lvj0),w(lvk0),w(lvi0),iuns,nou,bou,nbuf,ibufdim,
-     .  nummem)
+     .  nummem,w(lx),w(ly),w(lz),nbl)
 c     noninertial boundary conditions
       if (jbcinfo(nbl,nseg,1,1).eq.1000.and.noninflag.gt.0) then
         call bcnonin(jdim,kdim,idim,w(lq),w(lqj0),w(lqk0),w(lqi0),
@@ -1346,7 +1346,7 @@ c
      .  w(lxtbj),w(lxtbk),w(lxtbi),w(latbj),w(latbk),w(latbi),
      .  ista,iend,jsta,jend,ksta,kend,4,w(lxib),w(ltj0),w(ltk0),w(lti0),
      .  w(lvis),w(lvj0),w(lvk0),w(lvi0),iuns,nou,bou,nbuf,ibufdim,
-     .  nummem)
+     .  nummem,w(lx),w(ly),w(lz),nbl)
 c     noninertial boundary conditions
       if (jbcinfo(nbl,nseg,1,2).eq.1000.and.noninflag.gt.0) then
         call bcnonin(jdim,kdim,idim,w(lq),w(lqj0),w(lqk0),w(lqi0),
@@ -1631,7 +1631,7 @@ c
      .  w(lxtbj),w(lxtbk),w(lxtbi),w(latbj),w(latbk),w(latbi),
      .  ista,iend,jsta,jend,ksta,kend,5,w(lxib),w(ltj0),w(ltk0),w(lti0),
      .  w(lvis),w(lvj0),w(lvk0),w(lvi0),iuns,nou,bou,nbuf,ibufdim,
-     .  nummem)
+     .  nummem,w(lx),w(ly),w(lz),nbl)
 c     noninertial boundary conditions
       if (kbcinfo(nbl,nseg,1,1).eq.1000.and.noninflag.gt.0) then
         call bcnonin(jdim,kdim,idim,w(lq),w(lqj0),w(lqk0),w(lqi0),
@@ -1916,7 +1916,7 @@ c
      .  w(lxtbj),w(lxtbk),w(lxtbi),w(latbj),w(latbk),w(latbi),
      .  ista,iend,jsta,jend,ksta,kend,6,w(lxib),w(ltj0),w(ltk0),w(lti0),
      .  w(lvis),w(lvj0),w(lvk0),w(lvi0),iuns,nou,bou,nbuf,ibufdim,
-     .  nummem)
+     .  nummem,w(lx),w(ly),w(lz),nbl)
 c     noninertial boundary conditions
       if (kbcinfo(nbl,nseg,1,2).eq.1000.and.noninflag.gt.0) then
         call bcnonin(jdim,kdim,idim,w(lq),w(lqj0),w(lqk0),w(lqi0),

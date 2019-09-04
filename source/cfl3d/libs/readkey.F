@@ -126,6 +126,7 @@ c
      .        wc_specialtop_kmax1001
       common /iupdate/ iupdatemean
       common /wallvel_2034/ uub_2034,vvb_2034,wwb_2034,vvb_xaxisrot2034
+      common /gust/ igust
 c
       ititr = 0
       nkey  = 0
@@ -1007,6 +1008,15 @@ c   only works when i_tauijs=1
 c
 c   i_yapterm=1 adds Yap-like term to get rid of backbending in RSM
       i_yapterm=0
+      nkey     = nkey + 1
+c
+c     igust - simulate gusty flow with
+c           0 - off
+c           1 - resolved gust (modified BC1000)
+c           2 - field velocity (RHS)
+c           3 - split velocity (RHS)
+c     if igust > 0, a gust profile "gust_profile.dat" must be provided
+      igust    = 0
       nkey     = nkey + 1
 c
 c*********************************************
@@ -2016,6 +2026,10 @@ c
       else if (inpstr(lc1:lc2).eq.'i_yapterm') then
          lc2 = lc2 +1
          read(inpstr(lc2:lcl),*) i_yapterm
+c
+      else if (inpstr(lc1:lc2).eq.'igust') then 
+         lc2 = lc2 +1
+         read(inpstr(lc2:lcl),*) igust
 c
       else
 c

@@ -12,6 +12,7 @@ set(DIST_SRC
 	updatedg.F      ae_corr.F       mgbl.F          setslave.F
 	umalloc.F       reass.F         qoutavg.F       plot3davg.F
   qout_coarse.F   qout_2d.F       plot3d_2d.F     plot3d_coarse.F
+  dist_gust.F90
 )
 
 set(CFL3D_SRC ${CFLSRC_S}/ccomplex.F development.F main.F)
@@ -35,7 +36,7 @@ if(BUILD_REAL)
     if(WITH_CGNS)
       target_link_libraries(dist_mpi PUBLIC cgns)
     endif(WITH_CGNS)
-    target_link_libraries(dist_mpi PUBLIC mpi)
+    target_link_libraries(dist_mpi PUBLIC MPI::MPI_Fortran)
     add_executable(cfl3d_mpi ${CFL3D_SRC})
     target_link_libraries(cfl3d_mpi PUBLIC dist_mpi)
   endif(BUILD_MPI)
@@ -58,7 +59,7 @@ if(BUILD_CMPLX)
     if(WITH_CGNS)
       target_link_libraries(dist_cmplx_mpi PUBLIC cgns)
     endif(WITH_CGNS)
-    target_link_libraries(dist_cmplx_mpi PUBLIC mpi)
+    target_link_libraries(dist_cmplx_mpi PUBLIC MPI::MPI_Fortran)
     add_executable(cfl3dcmplx_mpi ${CFL3D_SRC})
     target_link_libraries(cfl3dcmplx_mpi PUBLIC dist_cmplx_mpi)
   endif(BUILD_MPI)

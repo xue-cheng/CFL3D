@@ -31,6 +31,15 @@ option(BUILD_MAGGIE "build maggie" OFF)
 option(BUILD_TOOLS "build cfl3d tools" ON)
 
 ###########################################################################
+# include addtional directories
+# set(ADDTIONAL_INCLUDE_DIR "" CACHE PATH "Addtional Include Directory")
+if (EXISTS ${ADDTIONAL_INCLUDE_DIR})
+  message(STATUS "include_directories(${ADDTIONAL_INCLUDE_DIR})" )
+  include_directories(${ADDTIONAL_INCLUDE_DIR})
+else(EXISTS ${ADDTIONAL_INCLUDE_DIR})
+  message(STATUS "ADDTIONAL_INCLUDE_DIR does not exists" )
+endif(EXISTS ${ADDTIONAL_INCLUDE_DIR})
+###########################################################################
 # setting up compiler flags
 
 if(NO_REDIRECT)
@@ -68,28 +77,12 @@ endif(WITH_CGNS)
 # MPI
 if(BUILD_MPI)
   
-  find_package(MPI 1.0 REQUIRED)
+  find_package(MPI REQUIRED)
   if(MPI_Fortran_FOUND)
-    add_library(mpi STATIC IMPORTED)
-    set_property(TARGET mpi PROPERTY 
-      INTERFACE_INCLUDE_DIRECTORIES ${MPI_Fortran_INCLUDE_PATH})
-    #message("Choose the first element of libs: ${MPI_Fortran_LIBRARIES}")
-    set(other_elems ${MPI_Fortran_LIBRARIES})
-    list(GET other_elems 0 first_elem)
-    list(REMOVE_AT other_elems 0)
-    set_property(TARGET mpi PROPERTY 
-      IMPORTED_LOCATION ${first_elem})
-    set_property(TARGET mpi PROPERTY 
-      INTERFACE_LINK_LIBRARIES ${other_elems})
-    set_property(TARGET mpi APPEND PROPERTY 
-      INTERFACE_COMPILE_DEFINITIONS "DIST_MPI")
-    set_property(TARGET mpi APPEND PROPERTY 
-      LINK_FLAGS "${MPI_Fortran_LINK_FLAGS}")
-    set_property(TARGET mpi APPEND PROPERTY 
-      INTERFACE_COMPILE_OPTIONS "${MPI_Fortran_COMPILE_FLAGS}")
+    message(STATUS ${MPI_Fortran_INCLUDE_DIRS})
     ## FAST-io
     if(WITH_FASTIO)
-      set_property(TARGET mpi APPEND PROPERTY INTERFACE_COMPILE_DEFINITIONS "FASTIO")
+      set_property(TARGET MPI::MPI_Fortran APPEND PROPERTY INTERFACE_COMPILE_DEFINITIONS "FASTIO")
     endif(WITH_FASTIO)
   else(MPI_Fortran_FOUND)
     ## FAST-io

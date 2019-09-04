@@ -593,6 +593,7 @@ c
          work(nlast+175)= i_qcr2000
          work(nlast+176)= i_qcr2013
          work(nlast+177)= i_yapterm
+         work(nlast+178)= igust
          nlast = nlast+nkey
       end if
 c
@@ -950,6 +951,7 @@ c
          i_qcr2000 = int(work(nlast+175))
          i_qcr2013 = int(work(nlast+176))
          i_yapterm = int(work(nlast+177))
+         igust = int(work(nlast+178))
       end if
 c
 c**************************

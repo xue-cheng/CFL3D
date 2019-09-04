@@ -295,6 +295,8 @@ c                  i.e. up to mxbcfil bc files may be specified in the
 c                  cfl3d input deck.
 c***********************************************************************
 c
+      use module_gust
+      use dist_gust
 #   ifdef CMPLX
       implicit complex(a-h,o-z)
 #   endif
@@ -354,6 +356,7 @@ c
       common /key/ nkey
       common /zero/ iexp
       common /wrestq/ irest,irest2
+      common /gust/ igust
 #   ifdef FASTIO
       common/rjbdbgi/lunfio0
       lunfio0=8000
@@ -737,6 +740,13 @@ c
          allocate(blocks_clcd(1,1))
       end if
 
+      if (igust .ne. 0) then
+        call read_gust_profile(ierr)
+        if (ierr .ne. 0) then
+          write(*,*) "In gust profile: ",get_err_msg(ierr)
+          call termn8(myid,-1,ibufdim,nbuf,bou,nou)
+        end if
+      end if
 
 #   ifdef CGNS
       open(unit=901,file='cgnsinfo.out',form='formatted',
@@ -856,7 +866,19 @@ c
          end if
       end if
 
+      call mpi_bcast(igust, 1, MPI_INTEGER, myhost, mycomm, ierr)
+      if (igust .ne. 0) then
+        call distribute_gust_profile(ierr)
+      end if
+
 #endif
+      if (igust .ne. 0) then
+        call build_gust_interpolator(ierr)
+        if (ierr .ne. 0) then
+          write(*,*) "In gust profile: ",get_err_msg(ierr)
+          call termn8(myid,-1,ibufdim,nbuf,bou,nou)
+        end if
+      end if
 
 c     close/delete precfl3d error file, and reopen as cfl3d error file
 c
