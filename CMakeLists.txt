@@ -36,8 +36,6 @@ option(BUILD_TOOLS "build cfl3d tools" ON)
 if (EXISTS ${ADDTIONAL_INCLUDE_DIR})
   message(STATUS "include_directories(${ADDTIONAL_INCLUDE_DIR})" )
   include_directories(${ADDTIONAL_INCLUDE_DIR})
-else(EXISTS ${ADDTIONAL_INCLUDE_DIR})
-  message(STATUS "ADDTIONAL_INCLUDE_DIR does not exists" )
 endif(EXISTS ${ADDTIONAL_INCLUDE_DIR})
 ###########################################################################
 # setting up compiler flags
@@ -79,7 +77,8 @@ if(BUILD_MPI)
   
   find_package(MPI REQUIRED)
   if(MPI_Fortran_FOUND)
-    message(STATUS ${MPI_Fortran_INCLUDE_DIRS})
+    set_property(TARGET MPI::MPI_Fortran APPEND PROPERTY 
+      INTERFACE_COMPILE_DEFINITIONS "DIST_MPI")
     ## FAST-io
     if(WITH_FASTIO)
       set_property(TARGET MPI::MPI_Fortran APPEND PROPERTY INTERFACE_COMPILE_DEFINITIONS "FASTIO")

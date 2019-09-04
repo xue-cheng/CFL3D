@@ -23,6 +23,10 @@ contains
     integer :: i,j,k
     integer :: ip3dgrd,ialph
     common /igrdtyp/ ip3dgrd,ialph
+    if (ialph .ne. 0) then 
+      iflag = 3
+      return 
+    end if
     iflag = 0 ! succeed
     inquire(file="gust_profile.inp", exist=exists)
     if (.not. exists) then
@@ -37,7 +41,7 @@ contains
     open(unit=ug, file="gust_profile.inp", status='old')
     read(ug, *) !title
     read(ug, *) gprf%nx,gprf%ny,gprf%nz,gprf%kx,gprf%ky,gprf%kz
-    call check_dim_order(gprf%nx,gprf%ny,gprf%nz,gprf%kx,gprf%ky,gprf%kz,iflag)
+    call check_dir_order(gprf%nx,gprf%ny,gprf%nz,gprf%kx,gprf%ky,gprf%kz,iflag)
     if (iflag .ne. 0) return
     if (ialph .eq. 0) then 
       ! alpha in x-z plane
@@ -52,27 +56,6 @@ contains
       read(ug, *) (((gprf%u(i,j,k), i=1,gprf%nx), j=1,gprf%ny), k=1,gprf%nz)
       read(ug, *) (((gprf%v(i,j,k), i=1,gprf%nx), j=1,gprf%ny), k=1,gprf%nz)
       read(ug, *) (((gprf%w(i,j,k), i=1,gprf%nx), j=1,gprf%ny), k=1,gprf%nz)
-    else 
-      ! !TODO: need to be carefully tested
-      ! swap y <--> z v<-->w
-      allocate(gprf%x(gprf%nx), gprf%z(gprf%ny), gprf%y(gprf%nz))
-      allocate(gprf%u(gprf%nx,gprf%nz,gprf%ny)) 
-      allocate(gprf%v(gprf%nx,gprf%nz,gprf%ny))
-      allocate(gprf%w(gprf%nx,gprf%nz,gprf%ny))
-      read(ug, *) (gprf%x(i), i=1,gprf%nx)
-      read(ug, *) (gprf%z(j), j=1,gprf%ny)
-      read(ug, *) (gprf%y(k), k=1,gprf%nz)
-      read(ug, *) (((gprf%u(i,k,j), i=1,gprf%nx), j=1,gprf%ny), k=1,gprf%nz)
-      read(ug, *) (((gprf%w(i,k,j), i=1,gprf%nx), j=1,gprf%ny), k=1,gprf%nz)
-      read(ug, *) (((gprf%v(i,k,j), i=1,gprf%nx), j=1,gprf%ny), k=1,gprf%nz)
-      do k=1,gprf%nz
-        gprf%y(k) = -gprf%y(k)
-        do j=1,gprf%ny
-          do i=1,gprf%nx
-            gprf%v(i,j,k) = -gprf%v(i,j,k)
-          end do
-        end do
-      enddo
     end if
     gprf%xmin = minval(gprf%x)
     gprf%xmax = maxval(gprf%x)
@@ -82,7 +65,7 @@ contains
     gprf%zmax = maxval(gprf%z)
     close(ug)
     contains
-    subroutine check_dim_order(nx,ny,nz,kx,ky,kz,iflag)
+    subroutine check_dir_order(nx,ny,nz,kx,ky,kz,iflag)
       implicit none
       integer::nx,ny,nz,kx,ky,kz,iflag
       if(nx.lt.3) then
@@ -109,17 +92,17 @@ contains
     iflag = 0
     call gitp_u%initialize(gprf%x,gprf%y,gprf%z,gprf%u,gprf%kx,gprf%ky,gprf%kz,iflag)
     if (iflag.ne.0) then
-      call pack_dim_err(1, iflag)
+      iflag = pack_dir_err(1, iflag)
       return
     end if
     call gitp_v%initialize(gprf%x,gprf%y,gprf%z,gprf%v,gprf%kx,gprf%ky,gprf%kz,iflag)
     if (iflag.ne.0) then
-      call pack_dim_err(2, iflag)
+      iflag = pack_dir_err(2, iflag)
       return
     end if
     call gitp_w%initialize(gprf%x,gprf%y,gprf%z,gprf%w,gprf%kx,gprf%ky,gprf%kz,iflag)
     if (iflag.ne.0) then
-      call pack_dim_err(3, iflag)
+      iflag = pack_dir_err(3, iflag)
       return
     end if
   end subroutine build_gust_interpolator
@@ -144,40 +127,40 @@ contains
     else
       call gitp_u%evaluate(xg,yg,zg,0,0,0,ug,iflag)
       if (iflag .ne. 0) then
-        call pack_dim_err(1, iflag)
+        iflag = pack_dir_err(1, iflag)
         return
       endif 
       call gitp_v%evaluate(xg,yg,zg,0,0,0,vg,iflag)
       if (iflag .ne. 0) then
-        call pack_dim_err(2, iflag)
+        iflag = pack_dir_err(2, iflag)
         return
       endif 
       call gitp_w%evaluate(xg,yg,zg,0,0,0,wg,iflag)
       if (iflag .ne. 0) then
-        call pack_dim_err(3, iflag)
+        iflag = pack_dir_err(3, iflag)
         return
       endif
     end if
   end subroutine gust_vel
 
 
-  subroutine pack_dim_err(dim, iflag)
+  function pack_dir_err(idir, iflag) result(flg)
     implicit none
-    integer:: dim, iflag
-    iflag = sign(dim,iflag)*10000+iflag
-  end subroutine pack_dim_err
+    integer:: idir, iflag, flg
+    flg = sign(idir,iflag)*10000+iflag
+  end function pack_dir_err
 
 
   function get_err_msg(iflag) result(msg)
-    integer:: iflag, dim, ifspline
+    integer:: iflag, idir, ifspline
     character(len=:),allocatable :: msg    !! status message associated with the flag
     character(len=10) :: istr   !! for integer to string conversion
     integer           :: istat  !! for write statement
     integer           :: ip3dgrd,ialph
     common /igrdtyp/ ip3dgrd,ialph
-    dim = abs(iflag / 10000)
+    idir = abs(iflag / 10000)
     ifspline = mod(iflag, 10000)
-    select case (dim)
+    select case (idir)
     case(0)
       select case (ifspline)
       case(0)
@@ -187,7 +170,7 @@ contains
       case(2)
         msg = 'Error in read_gust_profile: unit numer has been used occupied'
       case(3)
-        msg = 'Error in read_gust_profile: arraies must no be allocated'
+        msg = 'Error in read_gust_profile: gust module does not compatible with ialph=1'
       case(11)
         msg = 'Error in read_gust_profile: at least 3 points in x-direction'
       case(12)

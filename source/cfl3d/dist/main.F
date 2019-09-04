@@ -296,7 +296,6 @@ c                  cfl3d input deck.
 c***********************************************************************
 c
       use module_gust
-      use dist_gust
 #   ifdef CMPLX
       implicit complex(a-h,o-z)
 #   endif
@@ -868,7 +867,31 @@ c
 
       call mpi_bcast(igust, 1, MPI_INTEGER, myhost, mycomm, ierr)
       if (igust .ne. 0) then
-        call distribute_gust_profile(ierr)
+        call MPI_Bcast(gprf%nx,  1,MPI_INTEGER,myhost,mycomm,iflag)
+        call MPI_Bcast(gprf%ny,  1,MPI_INTEGER,myhost,mycomm,iflag)
+        call MPI_Bcast(gprf%nz,  1,MPI_INTEGER,myhost,mycomm,iflag)
+        call MPI_Bcast(gprf%kx,  1,MPI_INTEGER,myhost,mycomm,iflag)
+        call MPI_Bcast(gprf%ky,  1,MPI_INTEGER,myhost,mycomm,iflag)
+        call MPI_Bcast(gprf%kz,  1,MPI_INTEGER,myhost,mycomm,iflag)
+        call MPI_Bcast(gprf%xmin,1,MY_MPI_REAL,myhost,mycomm,iflag)
+        call MPI_Bcast(gprf%xmax,1,MY_MPI_REAL,myhost,mycomm,iflag)
+        call MPI_Bcast(gprf%ymin,1,MY_MPI_REAL,myhost,mycomm,iflag)
+        call MPI_Bcast(gprf%ymax,1,MY_MPI_REAL,myhost,mycomm,iflag)
+        call MPI_Bcast(gprf%zmin,1,MY_MPI_REAL,myhost,mycomm,iflag)
+        call MPI_Bcast(gprf%zmax,1,MY_MPI_REAL,myhost,mycomm,iflag)
+        if (myid.ne.myhost) then
+           allocate(gprf%x(gprf%nx),gprf%y(gprf%ny),gprf%z(gprf%nz))
+           allocate(gprf%u(gprf%nx,gprf%ny,gprf%nz))
+           allocate(gprf%v(gprf%nx,gprf%ny,gprf%nz))
+           allocate(gprf%w(gprf%nx,gprf%ny,gprf%nz))
+        end if
+        iblksize = gprf%nx*gprf%ny*gprf%nz
+        call MPI_Bcast(gprf%x,gprf%nx, MY_MPI_REAL,myhost,mycomm,iflag)
+        call MPI_Bcast(gprf%y,gprf%ny, MY_MPI_REAL,myhost,mycomm,iflag)
+        call MPI_Bcast(gprf%z,gprf%nz, MY_MPI_REAL,myhost,mycomm,iflag)
+        call MPI_Bcast(gprf%u,iblksize,MY_MPI_REAL,myhost,mycomm,iflag)
+        call MPI_Bcast(gprf%v,iblksize,MY_MPI_REAL,myhost,mycomm,iflag)
+        call MPI_Bcast(gprf%w,iblksize,MY_MPI_REAL,myhost,mycomm,iflag)
       end if
 
 #endif
