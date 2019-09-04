@@ -114,6 +114,7 @@ contains
     real::xc, yc, zc, time, qiv(5), ug, vg, wg
     real(wp)::xg,yg,zg
     integer::iflag
+    iflag = 0
     xg = xc - qiv(2)*time
     yg = yc - qiv(3)*time
     zg = zc - qiv(4)*time
