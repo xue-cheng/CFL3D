@@ -40,8 +40,7 @@ FSRC_DIST = \
 	yplusout.F     sizer.F        cfl3d.F        trnsfr_vals.F \
 	updatedg.F     ae_corr.F      mgbl.F         setslave.F \
 	umalloc.F      reass.F        qoutavg.F      plot3davg.F \
-        qout_coarse.F  qout_2d.F      plot3d_2d.F    plot3d_coarse.F \
-				dist_gust.F90
+        qout_coarse.F  qout_2d.F      plot3d_2d.F    plot3d_coarse.F 
 
 FSRC_SPEC =
 
