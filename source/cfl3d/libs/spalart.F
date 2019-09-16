@@ -1353,6 +1353,7 @@ c     IDDES
 c Low-Re correction
 c Psi^2 = ccmin(100, Psi^2)
 cc Calculate fw ft2 fv1 fv2
+            chi=turre(j,k,i)/fnu(j,k,i)
             fv1=chi**3/(chi**3+cv1**3)                  !fv1
             fv2=1.-(chi/(1.+chi*fv1))                   !fv2
             ft2=ct3*exp(-ct4*chi**2)
