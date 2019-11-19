@@ -1345,8 +1345,10 @@ c     IDDES
      *                    dist*dist*re )
             rdt = vist3d(j,k,i)*rd_deno
             rdl = fnu(j,k,i)*rd_deno
-            ft = cctanh((2.6569*rdt)**3)   !cdl^2 = 3.55^2 = 12.6025
-            fl = cctanh((12.6025*rdl)**10) !cdt^2 = 1.63^2 =  2.6569
+            cdt = 3.55
+            cdl = 1.63
+            ft = cctanh((cdt*cdt*rdt)**3)
+            fl = cctanh((cdl*cdl*rdl)**10)
             ra = 0.25-dist/delta
             ra2 = ra**2
             fb = ccmincr(2*exp(-9.0*ra2), 1.0)
