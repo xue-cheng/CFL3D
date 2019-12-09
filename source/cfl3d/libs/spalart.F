@@ -1323,14 +1323,13 @@ c     IDDES
             dist = ccabs(smin(j,k,i))
             if (ides.eq.11) then
               hmax = ccmax(deltaj, deltak)
-              hmin = ccmin(deltaj, deltak)
+              hwn = deltak
+              !hmin = ccmin(deltaj, deltak)
               ! Modifition to allow DES to run in 2d
               if( i2d .ne. 1 .and. iaxi2planeturb .ne. 1 ) then
                 hmax = ccmax(hmax,deltai)
-                hmin = ccmin(hmin,deltai)
               end if
-              ! use 'hmin' instead of h_wn which is unknwon currently
-              delta = ccmin(ccmax(0.15*dist, 0.15*hmax, hmin), hmax)
+              delta = ccmin(ccmax(0.15*dist, 0.15*hmax, hwn), hmax)
             else ! default: delta=max(hi,hj,hk)
               delta = ccmax(deltaj, deltak)
               ! Modifition to allow DES to run in 2d
