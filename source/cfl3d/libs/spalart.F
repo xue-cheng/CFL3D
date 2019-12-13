@@ -1329,7 +1329,8 @@ c     IDDES
               if( i2d .ne. 1 .and. iaxi2planeturb .ne. 1 ) then
                 hmax = ccmax(hmax,deltai)
               end if
-              delta = ccmin(ccmax(0.15*dist, 0.15*hmax, hwn), hmax)
+              h1 = ccmax(dist, hmax)
+              delta = ccmin(ccmax(0.15*h1, hwn), hmax)
             else ! default: delta=max(hi,hj,hk)
               delta = ccmax(deltaj, deltak)
               ! Modifition to allow DES to run in 2d
