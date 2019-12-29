@@ -25,7 +25,7 @@ c
      + fx,workx,by,cy,dy,fy,worky,bz,cz,dz,fz,workz,ntime,
      + tj0,tk0,ti0,nbl,qj0,qk0,qi0,blank,iover,sumn1,sumn2,negn1,negn2,
      + tursav2,volj0,volk0,voli0,nou,bou,nbuf,ibufdim,iex,iex2,iex3,
-     + bcj,bck,bci,ux,vx,nummem,fd,isarcnum)
+     + bcj,bck,bci,ux,vx,nummem,fd,isarcnum,desq)
 c
 c     $Id$
 c
@@ -94,6 +94,7 @@ c
      +          volk0(jdim,idim-1,4),voli0(jdim,kdim,4)
       dimension bcj(kdim,idim-1,2),bck(jdim,idim-1,2),bci(jdim,kdim,2),
      + ux(jdim-1,kdim-1,idim-1,9),vx(0:jdim,0:kdim,idim-1,isarcnum)
+      dimension desq(jdim-1,kdim-1,idim-1,10)
 c
       if(isklton .gt. 0) then
         if (i_saneg .eq. 1) then
@@ -1321,37 +1322,19 @@ c     IDDES
             deltak = 2.*vol(j,k,i)/(sk(j,k,i,4)+sk(j,k+1,i,4))
             deltai = 2.*vol(j,k,i)/(si(j,k,i,4)+si(j,k,i+1,4))
             dist = ccabs(smin(j,k,i))
-            if (ides.eq.11) then
-              hmax = ccmax(deltaj, deltak)
-              hwn = deltak
-              !hmin = ccmin(deltaj, deltak)
-              ! Modifition to allow DES to run in 2d
-              if( i2d .ne. 1 .and. iaxi2planeturb .ne. 1 ) then
-                hmax = ccmax(hmax,deltai)
-              end if
-              h1 = ccmax(dist, hmax)
-              delta = ccmin(ccmax(0.15*h1, hwn), hmax)
-            else ! default: delta=max(hi,hj,hk)
-              delta = ccmax(deltaj, deltak)
-              ! Modifition to allow DES to run in 2d
-              if( i2d .ne. 1 .and. iaxi2planeturb .ne. 1 ) then
-                delta = ccmax(delta,deltai)
-              end if
-            endif
+            hmax = ccmax(deltaj, deltak)
+            hmin = ccmin(deltaj, deltak)
+            !hmin = ccmin(deltaj, deltak)
+            ! Modifition to allow DES to run in 2d
+            if( i2d .ne. 1 .and. iaxi2planeturb .ne. 1 ) then
+              hmax = ccmax(hmax,deltai)
+              hmin = ccmin(hmin,deltai)
+            end if
+            h1 = ccmax(dist, hmax)
+            delta = ccmin(ccmax(0.15*h1, hmin), hmax)
             velterm=ux(j,k,i,1)**2 + ux(j,k,i,2)**2 + ux(j,k,i,3)**2 +
      +              ux(j,k,i,4)**2 + ux(j,k,i,5)**2 + ux(j,k,i,6)**2 +
      +              ux(j,k,i,7)**2 + ux(j,k,i,8)**2 + ux(j,k,i,9)**2
-            rd_deno = 1./( max(sqrt(velterm),1e-10)*akarman*akarman*
-     *                    dist*dist*re )
-            rdt = vist3d(j,k,i)*rd_deno
-            rdl = fnu(j,k,i)*rd_deno
-            cdt = 3.55
-            cdl = 1.63
-            ft = cctanh((cdt*cdt*rdt)**3)
-            fl = cctanh((cdl*cdl*rdl)**10)
-            ra = 0.25-dist/delta
-            ra2 = ra**2
-            fb = ccmincr(2*exp(-9.0*ra2), 1.0)
 c Low-Re correction
 c Psi^2 = ccmin(100, Psi^2)
 cc Calculate fw ft2 fv1 fv2
@@ -1365,6 +1348,19 @@ c Psi^2 = (1 - cb1/(cw1*akarman**2*fws)*(ft2+(1-ft2)*fv2))/fv1(1-ft2)
      /             (fv1*ccmaxrc(1e-10, 1.0 -ft2))
             Psi2 = ccminrc(100., Psi2)
             Psi = sqrt(Psi2)
+            rd_deno = 1./(max(sqrt(velterm),1e-10)*
+     *                    akarman*akarman*dist*dist*re)
+c           vist3d = turre * fv1 * rho
+c           rdt = vist3d*rd_deno/rho = turre*fv1*rd_deno
+            rdt = fv1*turre(j,k,i)*rd_deno
+            rdl = fnu(j,k,i)*rd_deno
+            cdt = 3.55
+            cdl = 1.63
+            ft = cctanh((cdt*cdt*rdt)**3)
+            fl = cctanh((cdl*cdl*rdl)**10)
+            ra = 0.25-dist/hmax
+            ra2 = ra**2
+            fb = ccmincr(2*exp(-9.0*ra2), 1.0)
             fe2 = 1.0 - ccmax(ft, fl)
             if(real(ra) .ge. 0.0) then
               fe1 = 2*exp(-11.09*ra2)
@@ -1372,9 +1368,9 @@ c Psi^2 = (1 - cb1/(cw1*akarman**2*fws)*(ft2+(1-ft2)*fv2))/fv1(1-ft2)
               fe1 = 2*exp(-9.0*ra2)
             end if
             fe = ccmaxcr(fe1-1.0, 0.)*Psi*fe2
-            fd(j,k,i) = ccmax(cctanh((rdt*8)**3), fb)
+            fd(j,k,i) = ccmax(cctanh((rdt*8.0)**3), fb)
             damp1(j,k,i) = fd(j,k,i)*(1.0+fe)*dist + 
-     +        (1.0-fd(j,k,i))*cdes*delta
+     +        (1.0-fd(j,k,i))*cdes*delta*Psi
           enddo
         enddo
       enddo
