@@ -49,6 +49,7 @@ c
 #   endif
 c
       character*120 bou(ibufdim,nbuf)
+      character*120 qfname
 c
       dimension nou(nbuf)
       dimension wk(nwork)
@@ -85,6 +86,7 @@ c     dimension vmu(jdim-1,idim-1),vmuj1(kdim-1,idim-1)
       dimension mblk2nd(maxbl),idefrm(maxbl),iadvance(maxbl)
       dimension qavg(jdim,kdim,idim,5)
       dimension sumn(nummem),negn(nummem)
+      real, allocatable :: desq(:,:,:,:)
 c
       common /avgdata/ xnumavg,iteravg,xnumavg2,ipertavg,iclcd,isubit_r
       common /fluid/ gamma,gm1,gp1,gm1g,gp1g,ggm1
@@ -477,6 +479,7 @@ c   Spalart
        write(bou(nou(1),1),'('' nroom='',i12)') nroom
        call termn8(myid,-1,ibufdim,nbuf,bou,nou)
       end if
+      allocate(desq(jdim-1,kdim-1,idim-1,9))
       call spalart(jdim,kdim,idim,q,sj,sk,si,vol,dtj,x,y,z,vist3d,
      + res,snk0,xib,wk(iwk1),res(1,2),res(1,3),wk(iwk3),wk(iwk4),
      + wk(iwk5),wk(iwk6),wk(iwk7),wk(iwk8),wk(iwk9),wk(iwk10),wk(iwk11),
@@ -484,7 +487,16 @@ c   Spalart
      + wk(iwk18),ntime,tj0,tk0,ti0,nbl,qj0,qk0,qi0,blank,iover,sumn(1),
      + sumn(2),negn(1),negn(2),xib2,volj0,volk0,voli0,nou,bou,nbuf,
      + ibufdim,iex,iex2,iex3,bcj,bck,bci,ux,wk(iwk19),nummem,res(1,4),
-     + isarcnum)
+     + isarcnum,desq)
+c      if (nbl.lt.39) then 
+c        write(qfname,*) nbl
+c        open(404, file='desq_'//trim(adjustl(qfname))//'.dat', 
+c     ,   FORM='UNFORMATTED')
+c        write(404) idim-1,jdim-1,kdim-1
+c        write(404) ((((desq(j,k,i,n),i=1,idim-1),j=1,jdim-1),
+c     , k=1,kdim-1), n=1, 9)
+c        close(404)
+c      endif 
       else if (ivmx .ge. 6 .and. ivmx .le. 16) then
 c   two-equation turb model
       iwk1=1

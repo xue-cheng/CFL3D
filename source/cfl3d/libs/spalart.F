@@ -94,7 +94,7 @@ c
      +          volk0(jdim,idim-1,4),voli0(jdim,kdim,4)
       dimension bcj(kdim,idim-1,2),bck(jdim,idim-1,2),bci(jdim,kdim,2),
      + ux(jdim-1,kdim-1,idim-1,9),vx(0:jdim,0:kdim,idim-1,isarcnum)
-      dimension desq(jdim-1,kdim-1,idim-1,10)
+      dimension desq(jdim-1,kdim-1,idim-1,9)
 c
       if(isklton .gt. 0) then
         if (i_saneg .eq. 1) then
@@ -1371,6 +1371,16 @@ c           rdt = vist3d*rd_deno/rho = turre*fv1*rd_deno
             fd(j,k,i) = ccmax(cctanh((rdt*8.0)**3), fb)
             damp1(j,k,i) = fd(j,k,i)*(1.0+fe)*dist + 
      +        (1.0-fd(j,k,i))*cdes*delta*Psi
+c           desq(j,k,i,1) = x(j,k,i)
+c           desq(j,k,i,2) = y(j,k,i)
+c           desq(j,k,i,3) = z(j,k,i)
+c           desq(j,k,i,4) = fd(j,k,i)
+c           desq(j,k,i,5) = fe
+c           desq(j,k,i,6) = Psi
+c           desq(j,k,i,7) = dist
+c           desq(j,k,i,8) = delta
+c           desq(j,k,i,9) = damp1(j,k,i)
+
           enddo
         enddo
       enddo
