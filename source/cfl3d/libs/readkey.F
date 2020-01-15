@@ -500,7 +500,7 @@ c
 c     parameter controls whether turbulence model advection terms
 c     are 1st or 2nd order upwind on RHS (1=1st, 2=2nd)
 c     (note: LHS uses 1st order in both cases)
-      iturbord = 1
+      iturbord = 2
       nkey       = nkey + 1
 c
 c     value that k is set to for 2-eqn models if 
