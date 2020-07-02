@@ -37,12 +37,18 @@ c
 #   endif
 c
       dimension ax(n),ay(n),az(n),area(n),at(n),
-     .          qr(nvtq,5),ql(nvtq,5),f(nvtq,5)
+     .          qr(nvtq,5),ql(nvtq,5),f(nvtq,5),
+     .          fd(nvtq)
 c
       common /fluid/ gamma,gm1,gp1,gm1g,gp1g,ggm1
       common /precond/ cprec,uref,avn
       common /entfix/ epsa_l,epsa_r
       common /zero/iexp
+      common /fdsblend/ ifdsblend, cfdsblend
+
+c     Low-dissipasion corrction 
+      sigma = cfdsblend
+
 c
 c     Notes on the entropy fix implemented here and in dfhat, diagj,
 c     diagk, and diagi:
@@ -183,11 +189,30 @@ c
          ql(i,1) = t14+t15+t16
          ql(i,2) = t8*(t15-t16)
 c
-         f1 = f1-ql(i,1) 
-         f2 = f2-ql(i,1)*t9-ax(i)*ql(i,2)-qr(i,2)
-         f3 = f3-ql(i,1)*t10-ay(i)*ql(i,2)-qr(i,3) 
-         f4 = f4-ql(i,1)*t11-az(i)*ql(i,2)-qr(i,4) 
-         f5 = f5-ql(i,1)*t12-t13*ql(i,2)-qr(i,5)+t7*c1*t14
+c     Cheng XUE, Jun 24, 2020:
+c        dissipassion blending for DES calculation
+c        
+      if (ifdsblend .eq. 0) then
+         f1 = f1 - ql(i,1)
+         f2 = f2 - (ql(i,1)*t9  +ax(i)*ql(i,2) +qr(i,2))
+         f3 = f3 - (ql(i,1)*t10 +ay(i)*ql(i,2) +qr(i,3))
+         f4 = f4 - (ql(i,1)*t11 +az(i)*ql(i,2) +qr(i,4))
+         f5 = f5 - (ql(i,1)*t12 +t13*ql(i,2) +qr(i,5) -t7*c1*t14)
+      else
+c         if (ifdsblend.eq.2) then 
+c            sigma = 1-fd(i)
+c         endif
+c        Jul 2, 2020:
+c           sigma only applied to momentum equations
+         f1 = f1 - ql(i,1)
+         f2 = f2 - sigma*
+     *          (ql(i,1)*t9 + ax(i)*ql(i,2) + qr(i,2))
+         f3 = f3 - sigma*
+     *          (ql(i,1)*t10 + ay(i)*ql(i,2) + qr(i,3))
+         f4 = f4 - sigma*
+     *          (ql(i,1)*t11 + az(i)*ql(i,2) + qr(i,4))
+         f5 = f5 - (ql(i,1)*t12 +t13*ql(i,2) +qr(i,5) -t7*c1*t14)
+      endif
 c
 c         include factor one-half area
 c
@@ -326,11 +351,27 @@ c
          ql(i,1) = t14+fsum*(t15+t16)
          ql(i,2) = fsum*t8*xm2*(fmins*t15-fplus*t16)
 c
-         f1 = f1-ql(i,1) 
-         f2 = f2-ql(i,1)*t9-ax(i)*ql(i,2)-qr(i,2)
-         f3 = f3-ql(i,1)*t10-ay(i)*ql(i,2)-qr(i,3) 
-         f4 = f4-ql(i,1)*t11-az(i)*ql(i,2)-qr(i,4) 
-         f5 = f5-ql(i,1)*t12-t13*ql(i,2)-qr(i,5)+t7*c1*t14
+c     Cheng XUE, Jun 24, 2020:
+c        dissipassion blending for DES calculation
+      if (ifdsblend .eq. 0) then
+         f1 = f1 - ql(i,1)
+         f2 = f2 - (ql(i,1)*t9  +ax(i)*ql(i,2) +qr(i,2))
+         f3 = f3 - (ql(i,1)*t10 +ay(i)*ql(i,2) +qr(i,3))
+         f4 = f4 - (ql(i,1)*t11 +az(i)*ql(i,2) +qr(i,4))
+         f5 = f5 - (ql(i,1)*t12 +t13*ql(i,2) +qr(i,5) -t7*c1*t14)
+      else
+c         if (ifdsblend .eq. 2) then 
+c            sigma = fd(i, 1)
+c         endif
+         f1 = f1 - ql(i,1)
+         f2 = f2 - sigma*
+     *          (ql(i,1)*t9 + ax(i)*ql(i,2) + qr(i,2))
+         f3 = f3 - sigma*
+     *          (ql(i,1)*t10 + ay(i)*ql(i,2) + qr(i,3))
+         f4 = f4 - sigma*
+     *          (ql(i,1)*t11 + az(i)*ql(i,2) + qr(i,4))
+         f5 = f5 - (ql(i,1)*t12 +t13*ql(i,2) +qr(i,5) -t7*c1*t14)
+      endif
 c
 c         include factor one-half area
 c

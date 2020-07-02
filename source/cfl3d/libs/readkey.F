@@ -129,6 +129,7 @@ c
       common /iupdate/ iupdatemean
       common /wallvel_2034/ uub_2034,vvb_2034,wwb_2034,vvb_xaxisrot2034
       common /gust/ igust
+      common /fdsblend/ ifdsblend, cfdsblend
 c
       ititr = 0
       nkey  = 0
@@ -1029,6 +1030,12 @@ c           3 - split velocity (RHS)
 c     if igust > 0, a gust profile "gust_profile.dat" must be provided
       igust    = 0
       nkey     = nkey + 1
+c   Low dissipassion blending:
+c   ifdsblend=1 blend roe flux, with constant 'cfdsblend'
+      ifdsblend= 0
+      cfdsblend= 0.4
+      nkey     = nkey + 2
+
 c
 c*********************************************
 c     check for keyword-driven inputs
@@ -2061,6 +2068,14 @@ c
       else if (inpstr(lc1:lc2).eq.'igust') then 
          lc2 = lc2 +1
          read(inpstr(lc2:lcl),*) igust
+c
+      else if (inpstr(lc1:lc2).eq.'ifdsblend') then
+         lc2 = lc2 +1
+         read(inpstr(lc2:lcl),*) ifdsblend
+      else if (inpstr(lc1:lc2).eq.'cfdsblend') then
+         lc2 = lc2 +1
+         read(inpstr(lc2:lcl),*) realval(1)
+         cfdsblend = realval(1)
 c
       else
 c

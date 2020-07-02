@@ -247,6 +247,9 @@ c
      .        sigerf_specialtop_kmax1001
       common /iupdate/ iupdatemean
       common /wallvel_2034/ uub_2034,vvb_2034,wwb_2034,vvb_xaxisrot2034
+
+      common /gust/ igust
+      common /fdsblend/ ifdsblend, cfdsblend
 #if defined DIST_MPI
 c
 c***********************
@@ -601,6 +604,8 @@ c
          work(nlast+181)= i_qcr2013v
          work(nlast+182)= i_yapterm
          work(nlast+183)= igust
+         work(nlast+184)= ifdsblend
+         work(nlast+185)= cfdsblend
          nlast = nlast+nkey
       end if
 c
@@ -964,6 +969,8 @@ c
          i_qcr2013v = int(work(nlast+181))
          i_yapterm = int(work(nlast+182))
          igust = int(work(nlast+183))
+         ifdsblend = int(work(nlast+184))
+         cfdsblend = work(nlast+185)
       end if
 c
 c**************************
