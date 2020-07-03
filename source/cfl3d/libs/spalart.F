@@ -25,7 +25,7 @@ c
      + fx,workx,by,cy,dy,fy,worky,bz,cz,dz,fz,workz,ntime,
      + tj0,tk0,ti0,nbl,qj0,qk0,qi0,blank,iover,sumn1,sumn2,negn1,negn2,
      + tursav2,volj0,volk0,voli0,nou,bou,nbuf,ibufdim,iex,iex2,iex3,
-     + bcj,bck,bci,ux,vx,nummem,fd,isarcnum,desq)
+     + bcj,bck,bci,ux,vx,nummem,fd,isarcnum)
 c
 c     $Id$
 c
@@ -94,7 +94,7 @@ c
      +          volk0(jdim,idim-1,4),voli0(jdim,kdim,4)
       dimension bcj(kdim,idim-1,2),bck(jdim,idim-1,2),bci(jdim,kdim,2),
      + ux(jdim-1,kdim-1,idim-1,9),vx(0:jdim,0:kdim,idim-1,isarcnum)
-      dimension desq(jdim-1,kdim-1,idim-1,9)
+c      dimension desq(jdim-1,kdim-1,idim-1,9)
 c
       if(isklton .gt. 0) then
         if (i_saneg .eq. 1) then
