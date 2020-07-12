@@ -1,5 +1,7 @@
 # Untracked files:
 *.o
+*.mod
+.*/
 build/makefile
 build/tools/seq/*.F*
 build/splitcmplx/seq/*.F*
