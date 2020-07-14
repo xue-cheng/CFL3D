@@ -1368,9 +1368,10 @@ c           rdt = vist3d*rd_deno/rho = turre*fv1*rd_deno
               fe1 = 2*exp(-9.0*ra2)
             end if
             fe = ccmaxcr(fe1-1.0, 0.)*Psi*fe2
-            fd(j,k,i) = ccmax(cctanh((rdt*8.0)**3), fb)
-            damp1(j,k,i) = fd(j,k,i)*(1.0+fe)*dist + 
-     +        (1.0-fd(j,k,i))*cdes*delta*Psi
+            fdtilde = ccmax(cctanh((rdt*8.0)**3), fb)
+            fd(j,k,i) = 1.0-fdtilde
+            damp1(j,k,i) = fdtilde*(1.0+fe)*dist + 
+     +        fd(j,k,i)*cdes*delta*Psi
 c           desq(j,k,i,1) = x(j,k,i)
 c           desq(j,k,i,2) = y(j,k,i)
 c           desq(j,k,i,3) = z(j,k,i)
