@@ -9,7 +9,7 @@
 
     module bspline_module
 
-    use bspline_kinds_module, only: bspline_wp => wp
+    use module_kinds, only: wp
     use bspline_oo_module
     use bspline_sub_module
 

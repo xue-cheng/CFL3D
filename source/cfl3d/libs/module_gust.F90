@@ -1,6 +1,6 @@
 module module_gust
   use bspline_module
-  use bspline_kinds_module, only: wp
+  use module_kinds, only: wp
   implicit none
 
   type gust_profile

@@ -10,7 +10,7 @@
 
     module bspline_oo_module
 
-    use bspline_kinds_module, only: wp
+    use module_kinds, only: wp
     use,intrinsic :: iso_fortran_env, only: error_unit
     use bspline_sub_module
 

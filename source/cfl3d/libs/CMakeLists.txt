@@ -74,7 +74,7 @@ set(COMMON_F77_SRC
 set(COMMON_F90_SRC
   module_profileout.F90   module_contour.F90
 	module_kwstm.F90        module_stm_2005.F90
-	module_gust.F90         bspline_kinds_module.F90
+	module_gust.F90         module_kinds.F90
 	bspline_module.F90	    bspline_oo_module.F90
 	bspline_sub_module.F90
 )
