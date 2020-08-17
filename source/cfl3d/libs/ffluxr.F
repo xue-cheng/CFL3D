@@ -22,7 +22,7 @@ c  ---------------------------------------------------------------------------
 c
       subroutine ffluxr(k,npl,xkap,jdim,kdim,idim,res,q,qi0,si,t,nvtq,
      .                  nv,nfa,wfa,iwfa,ibctyp,isf,nbl,bci,nou,bou,nbuf,
-     .                  ibufdim,myid,mblk2nd,maxbl,idef)
+     .                  ibufdim,myid,mblk2nd,maxbl,idef,sigma)
 c
 c     $Id$
 c
@@ -31,6 +31,7 @@ c     Purpose:  Compute residual contributions for the
 c     right-hand-side in the I-direction from the inviscid terms.
 c***********************************************************************
 c
+      use module_fds_blend
 #   ifdef CMPLX
       implicit complex(a-h,o-z)
 #   endif
@@ -44,6 +45,7 @@ c
       dimension q(jdim,kdim,idim,5),qi0(jdim,kdim,5,4)
       dimension res(jdim,kdim,idim-1,5),bci(jdim,kdim,2)
       dimension t(nvtq,nv),mblk2nd(maxbl)
+      type(fds_sigma_t) sigma
 c
       common /fluid/ gamma,gm1,gp1,gm1g,gp1g,ggm1
       common /cpurate/ rate(5),ratesub(5),ncell(20)
@@ -55,6 +57,7 @@ c
      .        idiag(3),nitfo,iflagts,iflim(3),nres,levelb(5),mgflag,
      .        iconsf,mseq,ncyc1(5),levelt(5),nitfo1(5),ngam,nsm(5),iipv
       common /sklton/ isklton
+      common /fdsblend/ ifdsblend, cfdsblend, cfds_smin, cfds_smax
 c
       jdim1 = jdim-1
       idim1 = idim-1
@@ -349,12 +352,16 @@ c
       end if
   184 format(49h   computing inviscid fluxes, I-direction - flux-,
      .20hdifference splitting)
+c
+c     fill face sigma
+c
+      if (ifdsblend.gt.1) call sigma%sub_i(k,npl,wk_sigma)
       if (npl.eq.kdim) then
          call fhat(si(1,1,1),si(1,1,2),si(1,1,3),si(1,1,4),si(1,1,5),
-     .             t(1,31),t(1,26),t(1,21),n,nvtq) 
+     .             t(1,31),t(1,26),t(1,21),wk_sigma,n,nvtq) 
       else
          call fhat(t(1,15),t(1,16),t(1,17),t(1,18),t(1,19),
-     .             t(1,31),t(1,26),t(1,21),n,nvtq) 
+     .             t(1,31),t(1,26),t(1,21),wk_sigma,n,nvtq)
       end if
 c
       else

@@ -47,7 +47,7 @@ c
       dimension nou(nbuf)
 c
       common /unst/ time,cfltau,ntstep,ita,iunst,cfltau0,cfltauMax
-      common /des/ cdes,ides,cddes
+      common /des/ cdes,ides,cddes,ides_sgs
       common /avgdata/ xnumavg,iteravg,xnumavg2,ipertavg,iclcd,isubit_r
       common /moov/movie,nframes,icall1,lhdr,icoarsemovie,i2dmovie
       common /ginfo2/ lq2avg,iskip_blocks,inc_2d(3),inc_coarse(3)
@@ -129,7 +129,8 @@ c
       common /iupdate/ iupdatemean
       common /wallvel_2034/ uub_2034,vvb_2034,wwb_2034,vvb_xaxisrot2034
       common /gust/ igust
-      common /fdsblend/ ifdsblend, cfdsblend
+      common /fdsblend/ ifdsblend, cfdsblend, cfds_smin, cfds_smax
+      common /slasgs/ fkh_min, fkh_max, fkh_a1, fkh_a2
 c
       ititr = 0
       nkey  = 0
@@ -445,6 +446,14 @@ c
 c     additional constant associated with Modified DDES (ides .ge. 3)
 c
       cddes = 0.975
+      nkey     = nkey + 1
+
+c
+c     Hybrid SGS, 0=DES Model Default
+c       1 = hmax = max(dx,dy,dz) [default for DES and DDES models]
+c       2 = min(max(.15*max(drans,hmax),hmin),hmax) [default for SA-IDDES]
+c
+      ides_sgs = 0
       nkey     = nkey + 1
 
 c
@@ -1033,8 +1042,17 @@ c     if igust > 0, a gust profile "gust_profile.dat" must be provided
 c   Low dissipassion blending:
 c   ifdsblend=1 blend roe flux, with constant 'cfdsblend'
       ifdsblend= 0
-      cfdsblend= 0.4
-      nkey     = nkey + 2
+      cfdsblend= 1.0
+      cfds_smin= 0.05
+      cfds_smax= 1.0
+      nkey     = nkey + 4
+c     Ref: DOI 10.1007/s10494-015-9618-0
+      fkh_min  = 0.1
+      fkh_max  = 1.0
+      fkh_a1   = 0.15
+      fkh_a2   = 0.3
+      nkey     = nkey + 4
+
 
 c
 c*********************************************
@@ -1523,6 +1541,9 @@ c
          lc2 = lc2 +1
          read(inpstr(lc2:lcl),*) realval(1)
          cddes = realval(1)
+      else if (inpstr(lc1:lc2).eq.'ides_sgs') then
+        lc2 = lc2 +1
+        read(inpstr(lc2:lcl),*) ides_sgs
 c
       else if (inpstr(lc1:lc2).eq.'iteravg') then
          lc2 = lc2 +1
@@ -2076,6 +2097,31 @@ c
          lc2 = lc2 +1
          read(inpstr(lc2:lcl),*) realval(1)
          cfdsblend = realval(1)
+      else if (inpstr(lc1:lc2).eq.'cfds_smin') then
+         lc2 = lc2 +1
+         read(inpstr(lc2:lcl),*) realval(1)
+         cfds_smin = realval(1)
+      else if (inpstr(lc1:lc2).eq.'cfds_smax') then
+         lc2 = lc2 +1
+         read(inpstr(lc2:lcl),*) realval(1)
+         cfds_smax = realval(1)
+c         
+      else if (inpstr(lc1:lc2).eq.'fkh_min') then 
+        lc2 = lc2 +1
+        read(inpstr(lc2:lcl),*) realval(1)
+        fkh_min = realval(1)
+      else if (inpstr(lc1:lc2).eq.'fkh_max') then 
+        lc2 = lc2 +1
+        read(inpstr(lc2:lcl),*) realval(1)
+        fkh_max = realval(1)
+      else if (inpstr(lc1:lc2).eq.'fkh_a1') then 
+        lc2 = lc2 +1
+        read(inpstr(lc2:lcl),*) realval(1)
+        fkh_a1 = realval(1)
+      else if (inpstr(lc1:lc2).eq.'fkh_a2') then 
+        lc2 = lc2 +1
+        read(inpstr(lc2:lcl),*) realval(1)
+        fkh_a2 = realval(1)
 c
       else
 c

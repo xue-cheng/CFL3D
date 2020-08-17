@@ -146,7 +146,7 @@ c
      .                geom_img,surf_img,xrotrate_img,yrotrate_img,
      .                zrotrate_img
       common /cgns/ icgns,iccg,ibase,nzones,nsoluse,irind,jrind,krind
-      common /des/ cdes,ides,cddes
+      common /des/ cdes,ides,cddes,ides_sgs
       common /cfl/ dt0,dtold
       common /avgdata/ xnumavg,iteravg,xnumavg2,ipertavg,iclcd,isubit_r
       common /precond/ cprec,uref,avn
@@ -249,7 +249,7 @@ c
       common /wallvel_2034/ uub_2034,vvb_2034,wwb_2034,vvb_xaxisrot2034
 
       common /gust/ igust
-      common /fdsblend/ ifdsblend, cfdsblend
+      common /fdsblend/ ifdsblend, cfdsblend, cfds_smin, cfds_smax
 #if defined DIST_MPI
 c
 c***********************
@@ -606,6 +606,9 @@ c
          work(nlast+183)= igust
          work(nlast+184)= ifdsblend
          work(nlast+185)= cfdsblend
+         work(nlast+186)= cfds_smin
+         work(nlast+187)= cfds_smax
+         work(nlast+188)= ides_sgs
          nlast = nlast+nkey
       end if
 c
@@ -971,6 +974,9 @@ c
          igust = int(work(nlast+183))
          ifdsblend = int(work(nlast+184))
          cfdsblend = work(nlast+185)
+         cfds_smin = work(nlast+186)
+         cfds_smax = work(nlast+187)
+         ides_sgs  = int(work(nlast+188))
       end if
 c
 c**************************

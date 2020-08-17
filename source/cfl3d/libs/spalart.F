@@ -25,7 +25,7 @@ c
      + fx,workx,by,cy,dy,fy,worky,bz,cz,dz,fz,workz,ntime,
      + tj0,tk0,ti0,nbl,qj0,qk0,qi0,blank,iover,sumn1,sumn2,negn1,negn2,
      + tursav2,volj0,volk0,voli0,nou,bou,nbuf,ibufdim,iex,iex2,iex3,
-     + bcj,bck,bci,ux,vx,nummem,fd,isarcnum)
+     + bcj,bck,bci,ux,vx,nummem,fd,isarcnum,fds_sigma)
 c
 c     $Id$
 c
@@ -43,7 +43,7 @@ c
 c
       dimension nou(nbuf)
 c
-      common /des/ cdes,ides,cddes
+      common /des/ cdes,ides,cddes,ides_sgs
       common /info/ title(20),rkap(3),xmach,alpha,beta,dt,fmax,nit,ntt,
      .        idiag(3),nitfo,iflagts,iflim(3),nres,levelb(5),mgflag,
      .        iconsf,mseq,ncyc1(5),levelt(5),nitfo1(5),ngam,nsm(5),iipv
@@ -68,6 +68,8 @@ c
       common /axisym/ iaxi2plane,iaxi2planeturb,istrongturbdis,iforcev0
       common /sa_options/ i_saneg,i_sanoft2,sa_cw2,sa_cw3,sa_cv1,sa_ct3,
      .                    sa_ct4,sa_cb1,sa_cb2,sa_sigma,sa_karman
+      common /fdsblend/ ifdsblend, cfdsblend, cfds_smin, cfds_smax
+      common /slasgs/ fkh_min, fkh_max, fkh_a1, fkh_a2
 c
 
       dimension q(jdim,kdim,idim,5),sj(jdim,kdim,idim-1,5),
@@ -94,7 +96,17 @@ c
      +          volk0(jdim,idim-1,4),voli0(jdim,kdim,4)
       dimension bcj(kdim,idim-1,2),bck(jdim,idim-1,2),bci(jdim,kdim,2),
      + ux(jdim-1,kdim-1,idim-1,9),vx(0:jdim,0:kdim,idim-1,isarcnum)
+      dimension fds_sigma(jdim,kdim,idim)
+      dimension rn(3,8),cg(3),rl(3,8),vvor(3),uvor(3),sdw(3)
 c      dimension desq(jdim-1,kdim-1,idim-1,9)
+c
+c     IDDES
+      parameter fws=0.424,cdt=3.55,cdl=1.63
+c     FDS Blend
+      parameter fds_cmu=0.09,fds_ch1=3.0,fds_ch2=1.0,fds_ch3=2.0
+      parameter osqrt3 = 0.5773502691896258
+      parameter sqrt6  = 2.449489742783178
+      if(ides_sgs.eq.4) fkh_slope=(fkh_max-fkh_min)/(fkh_a2-fkh_a1)
 c
       if(isklton .gt. 0) then
         if (i_saneg .eq. 1) then
@@ -1258,6 +1270,158 @@ c    Add source term to RHS
         write(bou(nou(1),1),'(''   no guarantee that it will '',
      .   ''transition at all.  Check vist3d levels if unsure.'')')
       end if
+c
+c calculate LES length scale here and store in damp1 temporarily
+c
+      if (ides .gt. 0) then
+        ! set default value
+        if (ides_sgs.eq.0) then 
+          if (ides.lt.10) then 
+            ides_sgs = 1
+          else
+            ides_sgs = 2
+          endif
+        endif
+        do i=1,idim-1
+          do j=1,jdim-1
+            do k=1,kdim-1
+              deltaj = 2.*vol(j,k,i)/(sj(j,k,i,4)+sj(j+1,k,i,4))
+              deltak = 2.*vol(j,k,i)/(sk(j,k,i,4)+sk(j,k+1,i,4))
+              deltai = 2.*vol(j,k,i)/(si(j,k,i,4)+si(j,k,i+1,4))
+              if(ides_sgs.eq.2) then
+                dist = ccabs(smin(j,k,i))
+                hmax = ccmax(deltaj, deltak)
+                hmin = ccmin(deltaj, deltak)
+                if( i2d .ne. 1 .and. iaxi2planeturb .ne. 1 ) then
+                  hmax = ccmax(hmax,deltai)
+                  hmin = ccmin(hmin,deltai)
+                end if
+                delta = ccmin(ccmax(.15*ccmax(dist,hmax),hmin),hmax)
+              elseif(ides_sgs.eq.3.or.ides_sgs.eq.4.and.i2d.ne.1) then 
+c               ux:
+c                           1 = ux    4 = vx    7 = wx
+c                           2 = uy    5 = vy    8 = wy
+c                           3 = uz    6 = vz    9 = wz 
+c               unit vorticity vector
+                vvor(1) = ux(j,k,i,8) - ux(j,k,i,6)
+                vvor(2) = ux(j,k,i,3) - ux(j,k,i,7)
+                vvor(3) = ux(j,k,i,4) - ux(j,k,i,2)
+                uvor = vvor / norm2(vvor) ! normalized
+                rn(1,1) = x(j  ,k  ,i  )
+                rn(1,2) = x(j+1,k  ,i  )
+                rn(1,3) = x(j  ,k+1,i  )
+                rn(1,4) = x(j+1,k+1,i  )
+                rn(1,5) = x(j  ,k  ,i+1)
+                rn(1,6) = x(j+1,k  ,i+1)
+                rn(1,7) = x(j  ,k+1,i+1)
+                rn(1,8) = x(j+1,k+1,i+1)
+                rn(2,1) = y(j  ,k  ,i  )
+                rn(2,2) = y(j+1,k  ,i  )
+                rn(2,3) = y(j  ,k+1,i  )
+                rn(2,4) = y(j+1,k+1,i  )
+                rn(2,5) = y(j  ,k  ,i+1)
+                rn(2,6) = y(j+1,k  ,i+1)
+                rn(2,7) = y(j  ,k+1,i+1)
+                rn(2,8) = y(j+1,k+1,i+1)
+                rn(3,1) = z(j  ,k  ,i  )
+                rn(3,2) = z(j+1,k  ,i  )
+                rn(3,3) = z(j  ,k+1,i  )
+                rn(3,4) = z(j+1,k+1,i  )
+                rn(3,5) = z(j  ,k  ,i+1)
+                rn(3,6) = z(j+1,k  ,i+1)
+                rn(3,7) = z(j  ,k+1,i+1)
+                rn(3,8) = z(j+1,k+1,i+1)
+                cg = 0.
+                do ir =1,8
+                  cg = cg + rn(:,ir)
+                enddo
+                cg = cg/8
+                do ir =1,8
+                  rn(:,ir) = rn(:,ir) - cg
+                  rl(:,ir) = cross_prod(uvor, rn(:,ir))
+                enddo
+                dmax = 0.0
+                do im = 1,7
+                  do in = im+1,8
+                    dn = norm2(rl(:,im)-rl(:,in))
+                    if (dn.gt.dmax) dmax = dn
+                  enddo
+                enddo
+                delta = osqrt3*dmax
+                if (ides_sgs.eq.4) then 
+                  if (ides.lt.2.or.fd(j,k,i).gt.0.99) then
+                  ! VTM
+c               shat:
+c                      ux      (vx+uy)/2   (wx+uz)/2
+c                  (vx+uy)/2       vy      (wy+vz)/2
+c                  (wx+uz)/2   (wy+vz)/2       wz
+                  sdw(1) =  ux(j,k,i,1)                   *vvor(1) + 
+     +                      0.5*(ux(j,k,i,2)+ux(j,k,i,4)) *vvor(2) + 
+     +                      0.5*(ux(j,k,i,3)+ux(j,k,i,7)) *vvor(3)
+                  sdw(2) =  0.5*(ux(j,k,i,2)+ux(j,k,i,4)) *vvor(1) +
+     +                      ux(j,k,i,5)                   *vvor(2) +
+     +                      0.5*(ux(j,k,i,6)+ux(j,k,i,8)) *vvor(3)
+                  sdw(3) =  0.5*(ux(j,k,i,3)+ux(j,k,i,7)) *vvor(1) +
+     +                      0.5*(ux(j,k,i,6)+ux(j,k,i,8)) *vvor(2) +
+     +                      ux(j,k,i,9)                   *vvor(3)
+                  uvor = cross_prod(sdw, vvor)
+                  VTM = sqrt6*norm2(uvor)
+                  trs2=
+     =              ux(j,k,i,1)**2+ux(j,k,i,5)**2+ux(j,k,i,9)**2 +
+     +              0.5*(ux(j,k,i,2)+ux(j,k,i,4))**2 +
+     +              0.5*(ux(j,k,i,3)+ux(j,k,i,7))**2 + 
+     +              0.5*(ux(j,k,i,6)+ux(j,k,i,8))**2
+                  trs = ux(j,k,i,1)+ux(j,k,i,5)+ux(j,k,i,9)
+                  VTM = VTM/(dot3(vvor,vvor)*sqrt(3*trs2-trs**2)) 
+                  VTM = VTM*ccmaxcr(0.2*fnu(j,k,i)/turre(j,k,i),1.0)
+                  fkh = fkh_min+fkh_slope*(VTM-fkh_a1)
+                  fkh = ccmax(fkh_min,ccmax(fkh_max,fkh))
+                  delta = delta*fkh
+                  endif
+                endif
+              endif
+              damp1(j,k,i) = delta
+            enddo
+          enddo
+        enddo
+      endif
+c
+c     FDS Blend
+c
+      if (ifdsblend.eq.3) then 
+        uref = sqrt(u0**2+v0**2+w0**2)
+        do i=1,idim-1
+          do j=1,jdim-1
+            do k=1,kdim-1
+              vort2 = 
+     +          (ux(j,k,i,8)-ux(j,k,i,6))**2 +
+     +          (ux(j,k,i,3)-ux(j,k,i,7))**2 +
+     +          (ux(j,k,i,4)-ux(j,k,i,2))**2
+c
+              str2 = 
+     +          (ux(j,k,i,8)+ux(j,k,i,6))**2 +
+     +          (ux(j,k,i,3)+ux(j,k,i,7))**2 +
+     +          (ux(j,k,i,4)+ux(j,k,i,2))**2 +
+     +          2.0*(ux(j,k,i,1)**2+ux(j,k,i,5)**2+ux(j,k,i,9)**2)
+              vort    = sqrt(vort2)
+              str     = sqrt(str2)
+              velterm = (vort2+str2)/2
+              fds_K   = ccmax(sqrt(velterm),ccmax(0.1*uref,xminn))
+              chi     = turre(j,k,i)/fnu(j,k,i)
+              fv1     = chi**3/(chi**3+cv1**3)
+              fds_lt  = sqrt((fv1*turre(j,k,i)+fnu(j,k,i))/
+     *                  (re*fds_K*(fds_cmu**1.5)))
+              fds_B   = fds_ch3*vort*ccmax(str,vort) /
+     /                  ccmaxcr(velterm, 1e-20)
+              fds_g   = ccmax(cctanh(fds_B**4),xminn)
+              fds_A1  = cdes*damp1(j,k,i)/fds_lt/fds_g-0.5
+              fds_A   = fds_ch2*ccmaxcr(fds_A1, 0.0)
+              fds_r   = cctanh(fds_A**fds_ch1)
+              fds_sigma(j,k,i) = cfds_smax*fds_r
+            enddo
+          enddo
+        enddo
+      endif
 c     can use damp1 to temporarily store distance variable (different for DES)
 c     (later, damp1 is used to store LHS implicit contribution)
       if (ides .eq. 1) then
@@ -1265,18 +1429,7 @@ c     DES
       do i=1,idim-1
         do j=1,jdim-1
           do k=1,kdim-1
-            deltaj = 2.*vol(j,k,i)/(sj(j,k,i,4)+sj(j+1,k,i,4))
-            deltak = 2.*vol(j,k,i)/(sk(j,k,i,4)+sk(j,k+1,i,4))
-            deltai = 2.*vol(j,k,i)/(si(j,k,i,4)+si(j,k,i+1,4))
-            delta = ccmax(deltaj,deltak)
-c
-c Modification to allow DES to run in 2d
-c
-            if( i2d .ne. 1 .and. iaxi2planeturb .ne. 1 ) then
-               delta = ccmax(delta,deltai)
-            end if
- 
-            damp1(j,k,i) = ccmin(ccabs(smin(j,k,i)),cdes*delta)
+            damp1(j,k,i) = ccmin(ccabs(smin(j,k,i)),cdes*damp1(j,k,i))
           enddo
         enddo
       enddo
@@ -1285,23 +1438,13 @@ c     DDES (TCFD 20:181-195, 2006)
       do i=1,idim-1
         do j=1,jdim-1
           do k=1,kdim-1
-            deltaj = 2.*vol(j,k,i)/(sj(j,k,i,4)+sj(j+1,k,i,4))
-            deltak = 2.*vol(j,k,i)/(sk(j,k,i,4)+sk(j,k+1,i,4))
-            deltai = 2.*vol(j,k,i)/(si(j,k,i,4)+si(j,k,i+1,4))
-            delta = ccmax(deltaj,deltak)
-c
-c Modification to allow DES to run in 2d
-c
-            if( i2d .ne. 1 .and. iaxi2planeturb .ne. 1 ) then
-               delta = ccmax(delta,deltai)
-            end if
-
+            delta = damp1(j,k,i)
             dist = ccabs(smin(j,k,i))
             velterm=ux(j,k,i,1)**2 + ux(j,k,i,2)**2 + ux(j,k,i,3)**2 +
      +              ux(j,k,i,4)**2 + ux(j,k,i,5)**2 + ux(j,k,i,6)**2 +
      +              ux(j,k,i,7)**2 + ux(j,k,i,8)**2 + ux(j,k,i,9)**2
-            rd = turre(j,k,i)/(sqrt(velterm)*akarman*akarman*
-     +           dist*dist*re)
+            rd = turre(j,k,i) /(ccmaxcr(sqrt(velterm),1e-10)*
+     *                    akarman*akarman*dist*dist*re)
             fd(j,k,i) = 1.0 - cctanh((8.0*rd)*(8.0*rd)*(8.0*rd))
             if( ides .ne. 7 ) then
                term = ccmaxrc(0.0,dist-cdes*delta) 
@@ -1309,29 +1452,18 @@ c
             else
                damp1(j,k,i) = ccabs(smin(j,k,i))
             end if
+            if (ifdsblend.eq.2) then
+              fds_sigma(j,k,i) = 1.0-fd(j,k,i)
+            endif
           enddo
         enddo
       enddo
       elseif (ides .ge. 10) then 
 c     IDDES
-      fws = 0.424
       do i=1,idim-1
         do j=1,jdim-1
           do k=1,kdim-1
-            deltaj = 2.*vol(j,k,i)/(sj(j,k,i,4)+sj(j+1,k,i,4))
-            deltak = 2.*vol(j,k,i)/(sk(j,k,i,4)+sk(j,k+1,i,4))
-            deltai = 2.*vol(j,k,i)/(si(j,k,i,4)+si(j,k,i+1,4))
-            dist = ccabs(smin(j,k,i))
-            hmax = ccmax(deltaj, deltak)
-            hmin = ccmin(deltaj, deltak)
-            !hmin = ccmin(deltaj, deltak)
-            ! Modifition to allow DES to run in 2d
-            if( i2d .ne. 1 .and. iaxi2planeturb .ne. 1 ) then
-              hmax = ccmax(hmax,deltai)
-              hmin = ccmin(hmin,deltai)
-            end if
-            h1 = ccmax(dist, hmax)
-            delta = ccmin(ccmax(0.15*h1, hmin), hmax)
+            delta = damp1(j,k,i)
             velterm=ux(j,k,i,1)**2 + ux(j,k,i,2)**2 + ux(j,k,i,3)**2 +
      +              ux(j,k,i,4)**2 + ux(j,k,i,5)**2 + ux(j,k,i,6)**2 +
      +              ux(j,k,i,7)**2 + ux(j,k,i,8)**2 + ux(j,k,i,9)**2
@@ -1354,8 +1486,6 @@ c           vist3d = turre * fv1 * rho
 c           rdt = vist3d*rd_deno/rho = turre*fv1*rd_deno
             rdt = fv1*turre(j,k,i)*rd_deno
             rdl = fnu(j,k,i)*rd_deno
-            cdt = 3.55
-            cdl = 1.63
             ft = cctanh((cdt*cdt*rdt)**3)
             fl = cctanh((cdl*cdl*rdl)**10)
             ra = 0.25-dist/hmax
@@ -1372,16 +1502,9 @@ c           rdt = vist3d*rd_deno/rho = turre*fv1*rd_deno
             fd(j,k,i) = 1.0-fdtilde
             damp1(j,k,i) = fdtilde*(1.0+fe)*dist + 
      +        fd(j,k,i)*cdes*delta*Psi
-c           desq(j,k,i,1) = x(j,k,i)
-c           desq(j,k,i,2) = y(j,k,i)
-c           desq(j,k,i,3) = z(j,k,i)
-c           desq(j,k,i,4) = fd(j,k,i)
-c           desq(j,k,i,5) = fe
-c           desq(j,k,i,6) = Psi
-c           desq(j,k,i,7) = dist
-c           desq(j,k,i,8) = delta
-c           desq(j,k,i,9) = damp1(j,k,i)
-
+            if (ifdsblend.eq.2) then
+              fds_sigma(j,k,i) = 1.0-fd(j,k,i)
+            endif
           enddo
         enddo
       enddo
@@ -2657,3 +2780,20 @@ c-----END HARDWIRED OUTPUT SECTION
 c
       return
       end
+      function cross_prod(v1,v2) result(v3)
+#   ifdef CMPLX
+      implicit complex(a-h,o-z)
+#   endif
+        dimension v1(3), v2(3), v3(3)
+        
+        v3(1) = v1(2)*v2(3) - v1(3)*v2(2)
+        v3(2) = v1(3)*v2(1) - v1(1)*v2(3)
+        v3(3) = v1(1)*v2(2) - v1(2)*v2(1)
+      end function cross_prod
+      function dot3(v1,v2) result(v3)
+#   ifdef CMPLX
+      implicit complex(a-h,o-z)
+#   endif
+        dimension v1(3), v2(3)
+        v3 = v1(1)*v2(1)+v1(2)*v2(2)+v1(3)*v2(3)
+      end function dot3

@@ -76,7 +76,7 @@ set(COMMON_F90_SRC
 	module_kwstm.F90        module_stm_2005.F90
 	module_gust.F90         module_kinds.F90
 	bspline_module.F90	    bspline_oo_module.F90
-	bspline_sub_module.F90
+	bspline_sub_module.F90  module_fds_blend.F90
 )
 
 set(COMMON_CMPLX_ONLY_SRC histout_img.F)

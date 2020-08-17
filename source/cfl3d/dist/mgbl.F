@@ -77,6 +77,7 @@ c
 #   else
       use module_kwstm, only:kws_get_nummem
 #   endif
+      use module_fds_blend
 c
 c     $Id$
 c
@@ -287,6 +288,7 @@ c
       common /deformz/ beta1,beta2,alpha1,alpha2,isktyp,negvol,meshdef,
      .                 nsprgit,ndgrd,ndwrt 
 
+      common /fdsblend/ ifdsblend, cfdsblend, cfds_smin, cfds_smax
       allocatable :: rmstr(:,:)
       allocatable :: nneg(:,:)
 c
@@ -740,6 +742,12 @@ c
       open(unit=17,file=printout,form='formatted',status='unknown')
 c
       end if
+c
+c***********************************************************************
+c     initialize fds blend
+c***********************************************************************
+c      
+      call init_fds_blend(nblock,levelg,mblk2nd,jdimg,kdimg,idimg)
 c
 c***********************************************************************
 c     mesh sequencing - cycle through mesh sequences, coarser to finer

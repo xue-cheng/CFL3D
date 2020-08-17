@@ -34,6 +34,7 @@ c
 #   else
       use module_kwstm, only: kws_main,kws_dump_movie
 #   endif
+      use module_fds_blend
 c
 c     $Id$
 c
@@ -119,11 +120,12 @@ c
      .        isar,crot,isarc3d
       common /sourceterm/ xdir_only_source
       common /mms/ iexact_trunc,iexact_disc,iexact_ring
-      common /des/ cdes,ides,cddes
+      common /des/ cdes,ides,cddes,ides_sgs
       common /memry/ lowmem_ux
       common /constit/ i_nonlin,c_nonlin,snonlin_lim,i_tauijs,i_qcr2000,
      .                 i_qcr2013,i_qcr2013v
       common /reystressmodel/ issglrrw2012,i_sas_rsm,i_yapterm
+      common /fdsblend/ ifdsblend, cfdsblend, cfds_smin, cfds_smax
 c
       jdim1 = jdim-1
       kdim1 = kdim-1
@@ -487,16 +489,8 @@ c      allocate(desq(jdim-1,kdim-1,idim-1,9))
      + wk(iwk18),ntime,tj0,tk0,ti0,nbl,qj0,qk0,qi0,blank,iover,sumn(1),
      + sumn(2),negn(1),negn(2),xib2,volj0,volk0,voli0,nou,bou,nbuf,
      + ibufdim,iex,iex2,iex3,bcj,bck,bci,ux,wk(iwk19),nummem,res(1,4),
-     + isarcnum)
-c      if (nbl.lt.39) then 
-c        write(qfname,*) nbl
-c        open(404, file='desq_'//trim(adjustl(qfname))//'.dat', 
-c     ,   FORM='UNFORMATTED')
-c        write(404) idim-1,jdim-1,kdim-1
-c        write(404) ((((desq(j,k,i,n),i=1,idim-1),j=1,jdim-1),
-c     , k=1,kdim-1), n=1, 9)
-c        close(404)
-c      endif 
+     + isarcnum, wk_sigma)
+      if (ifdsblend.ge.2) call fds_sigma(nbl)%update(wk_sigma)
       else if (ivmx .ge. 6 .and. ivmx .le. 16) then
 c   two-equation turb model
       iwk1=1
@@ -957,6 +951,23 @@ c   *********
       end if
       end if
 c
+c     dump sigma
+c
+      idumpfdsb=1
+
+      if ((idumpfdsb.ne.0)  .and.
+     .    (ifdsblend.ge.2)  .and.
+     .    (icyc.eq.ncyc)    .and.
+     .    (ntime.eq.nit)    .and. 
+     .    (level.ge.lglobal).and.
+     o    ( (real(dt).lt.0) .or.     ! steady state
+     .      (nt.eq.ntstep)  .or.     ! final time step
+     .      (nt.eq.nt/nwrest*nwrest) ! write restart
+     o    )) then
+        call fds_sigma(nbl)%dump(nt, x, y, z)
+      endif
+
+c
 c      residuals  res = r(q)
 c
       if (isklton.gt.0) then
@@ -1017,7 +1028,8 @@ c
       jbctyp(2) = jbcinfo(nbl,1,1,2)
       call gfluxr(i,npl,rkap(2),jdim,kdim,idim,res,q,qj0,sj,wk,nvtq,
      .            nv,nfajki(1),wfa,iwfa(niwfac),jbctyp,isf,nbl,bcj,
-     .            nou,bou,nbuf,ibufdim,myid,mblk2nd,maxbl,idefrm(nbl))
+     .            nou,bou,nbuf,ibufdim,myid,mblk2nd,maxbl,idefrm(nbl),
+     .            fds_sigma(nbl))
   200 continue
       end if
 c
@@ -1070,7 +1082,8 @@ c
       kbctyp(2) = kbcinfo(nbl,1,1,2)
       call hfluxr(i,npl,rkap(3),jdim,kdim,idim,res,q,qk0,sk,wk,nvtq, 
      .            nv,nfajki(2),wfa,iwfa(niwfac),kbctyp,isf,nbl,bck,
-     .            nou,bou,nbuf,ibufdim,myid,mblk2nd,maxbl,idefrm(nbl))
+     .            nou,bou,nbuf,ibufdim,myid,mblk2nd,maxbl,idefrm(nbl),
+     .            fds_sigma(nbl))
   210 continue
       end if
 c
@@ -1127,7 +1140,7 @@ c
          call ffluxr(k,npl,rkap(1),jdim,kdim,idim,res,q,qi0,si,wk,
      .               nvtq,nv,nfajki(3),wfa,iwfa(niwfac),ibctyp,isf,
      .               nbl,bci,nou,bou,nbuf,ibufdim,myid,mblk2nd,maxbl,
-     .               idefrm(nbl))
+     .               idefrm(nbl),fds_sigma(nbl))
   300    continue
          end if
 c

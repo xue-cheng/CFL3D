@@ -20,7 +20,7 @@ c  License for the specific language governing permissions and limitations
 c  under the License.
 c  ---------------------------------------------------------------------------
 c
-      subroutine fhat(ax,ay,az,area,at,f,qr,ql,n,nvtq)
+      subroutine fhat(ax,ay,az,area,at,f,qr,ql,fsig,n,nvtq)
 c
 c     $Id$
 c
@@ -32,19 +32,20 @@ c       cprec = 0 ---> original code used
 c             > 0 ---> modified code used
 c***********************************************************************
 c
+      use module_fds_blend
 #   ifdef CMPLX
       implicit complex(a-h,o-z)
 #   endif
 c
       dimension ax(n),ay(n),az(n),area(n),at(n),
      .          qr(nvtq,5),ql(nvtq,5),f(nvtq,5),
-     .          fd(nvtq)
+     .          fsig(nvtq)
 c
       common /fluid/ gamma,gm1,gp1,gm1g,gp1g,ggm1
       common /precond/ cprec,uref,avn
       common /entfix/ epsa_l,epsa_r
       common /zero/iexp
-      common /fdsblend/ ifdsblend, cfdsblend
+      common /fdsblend/ ifdsblend, cfdsblend, cfds_smin, cfds_smax
 
 c     Low-dissipasion corrction 
       sigma = cfdsblend
@@ -199,9 +200,9 @@ c
          f4 = f4 - (ql(i,1)*t11 +az(i)*ql(i,2) +qr(i,4))
          f5 = f5 - (ql(i,1)*t12 +t13*ql(i,2) +qr(i,5) -t7*c1*t14)
       else
-c         if (ifdsblend.eq.2) then 
-c            sigma = 1-fd(i)
-c         endif
+         if (ifdsblend.ge.2) then 
+            sigma = ccmin(ccmax(fsig(i),cfds_smin),cfds_smax)
+         endif
 c        Jul 2, 2020:
 c           sigma only applied to momentum equations
          f1 = f1 - ql(i,1)
@@ -360,9 +361,9 @@ c        dissipassion blending for DES calculation
          f4 = f4 - (ql(i,1)*t11 +az(i)*ql(i,2) +qr(i,4))
          f5 = f5 - (ql(i,1)*t12 +t13*ql(i,2) +qr(i,5) -t7*c1*t14)
       else
-c         if (ifdsblend .eq. 2) then 
-c            sigma = fd(i, 1)
-c         endif
+         if (ifdsblend .eq. 2) then 
+          sigma = ccmincr(ccmaxcr(fsig(i),0.05),1.0)
+         endif
          f1 = f1 - ql(i,1)
          f2 = f2 - sigma*
      *          (ql(i,1)*t9 + ax(i)*ql(i,2) + qr(i,2))
