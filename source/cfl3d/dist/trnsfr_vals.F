@@ -147,6 +147,7 @@ c
      .                zrotrate_img
       common /cgns/ icgns,iccg,ibase,nzones,nsoluse,irind,jrind,krind
       common /des/ cdes,ides,cddes,ides_sgs
+      common /slasgs/ fkh_min, fkh_max, fkh_a1, fkh_a2
       common /cfl/ dt0,dtold
       common /avgdata/ xnumavg,iteravg,xnumavg2,ipertavg,iclcd,isubit_r
       common /precond/ cprec,uref,avn
@@ -609,6 +610,10 @@ c
          work(nlast+186)= cfds_smin
          work(nlast+187)= cfds_smax
          work(nlast+188)= ides_sgs
+         work(nlast+189)= fkh_min
+         work(nlast+190)= fkh_max
+         work(nlast+191)= fkh_a1
+         work(nlast+192)= fkh_a2
          nlast = nlast+nkey
       end if
 c
@@ -977,6 +982,10 @@ c
          cfds_smin = work(nlast+186)
          cfds_smax = work(nlast+187)
          ides_sgs  = int(work(nlast+188))
+         fkh_min   = work(nlast+189)
+         fkh_max   = work(nlast+190)
+         fkh_a1    = work(nlast+191)
+         fkh_a2    = work(nlast+192)
       end if
 c
 c**************************
