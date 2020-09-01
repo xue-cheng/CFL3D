@@ -1298,15 +1298,10 @@ c             store hmax for further usage
               if (ides_sgs.eq.2) then
 c             IDDES
                 dist = ccabs(smin(j,k,i))
-                hmin = ccmin(deltaj, deltak)
-                if( i2d .ne. 1 .and. iaxi2planeturb .ne. 1 ) then
-                  hmin = ccmin(hmin,deltai)
-                end if
 c  M. S. Gritskevich, A. V. Garbaruk, J. Schütze, and F. R. Menter
 c  “Development of DDES and IDDES Formulations for the k-ω Shear Stress Transport Model,”
 c  Flow, Turbulence and Combustion, vol. 88, no. 3, pp. 431–449, Apr. 2012, doi: 10.1007/s10494-011-9378-4.
-                delta = ccmax(.15*ccmax(dist,hmax(j,k,i)),hmax(j,k,i))
-                delta = ccmin(delta, hmax(j,k,i))
+                delta = ccmin(.15*ccmax(dist,hmax(j,k,i)),hmax(j,k,i))
               elseif(ides_sgs.eq.3.or.ides_sgs.eq.4.and.i2d.ne.1) then 
 c             Vort-based
 c               ux:
@@ -1349,15 +1344,9 @@ c               unit vorticity vector
                 cg = cg/8
                 do ir =1,8
                   rn(:,ir) = rn(:,ir) - cg
-                  rl(:,ir) = cross_prod(uvor, rn(:,ir))
+                  call cross_prod(uvor, rn(:,ir), rl(:,ir))
                 enddo
-                dmax = 0.0
-                do im = 1,7
-                  do in = im+1,8
-                    dn = norm2(rl(:,im)-rl(:,in))
-                    if (dn.gt.dmax) dmax = dn
-                  enddo
-                enddo
+                call max_cross_distance(dmax, rl, 8)
                 delta = osqrt3*dmax
                 if (ides_sgs.eq.4) then 
 c  Shear Layer Adapt                  
@@ -1375,7 +1364,7 @@ c                  (wx+uz)/2   (wy+vz)/2       wz
                   sdw(3) =  0.5*(ux(j,k,i,3)+ux(j,k,i,7)) *vvor(1) +
      +                      0.5*(ux(j,k,i,6)+ux(j,k,i,8)) *vvor(2) +
      +                      ux(j,k,i,9)                   *vvor(3)
-                  uvor = cross_prod(sdw, vvor)
+                  call cross_prod(sdw, vvor, uvor)
                   VTM = sqrt6*norm2(uvor)
                   trs2=
      =              ux(j,k,i,1)**2+ux(j,k,i,5)**2+ux(j,k,i,9)**2 +
@@ -1476,6 +1465,7 @@ c     IDDES
         do j=1,jdim-1
           do k=1,kdim-1
             delta = damp1(j,k,i)
+            dist = ccabs(smin(j,k,i))
             velterm=ux(j,k,i,1)**2 + ux(j,k,i,2)**2 + ux(j,k,i,3)**2 +
      +              ux(j,k,i,4)**2 + ux(j,k,i,5)**2 + ux(j,k,i,6)**2 +
      +              ux(j,k,i,7)**2 + ux(j,k,i,8)**2 + ux(j,k,i,9)**2
@@ -2792,7 +2782,7 @@ c-----END HARDWIRED OUTPUT SECTION
 c
       return
       end
-      function cross_prod(v1,v2) result(v3)
+      subroutine cross_prod(v1,v2,v3)
 #   ifdef CMPLX
       implicit complex(a-h,o-z)
 #   endif
@@ -2801,7 +2791,8 @@ c
         v3(1) = v1(2)*v2(3) - v1(3)*v2(2)
         v3(2) = v1(3)*v2(1) - v1(1)*v2(3)
         v3(3) = v1(1)*v2(2) - v1(2)*v2(1)
-      end function cross_prod
+      end subroutine cross_prod
+
       function dot3(v1,v2) result(v3)
 #   ifdef CMPLX
       implicit complex(a-h,o-z)
@@ -2809,3 +2800,23 @@ c
         dimension v1(3), v2(3)
         v3 = v1(1)*v2(1)+v1(2)*v2(2)+v1(3)*v2(3)
       end function dot3
+
+      subroutine max_cross_distance(dmax, rl, n)
+#   ifdef CMPLX
+      implicit complex(a-h,o-z)
+#   endif
+        dimension rl(3,n)
+        
+        dm2 = 0.0
+        do im = 1,n-1
+          do in = im+1,n
+            dx = rl(1,im)-rl(1,in)
+            dy = rl(2,im)-rl(2,in)
+            dz = rl(3,im)-rl(3,in)
+            d2 = dx*dx+dy*dy+dz*dz
+            if (d2.gt.dm2) dm2 = d2
+          enddo
+        enddo
+        dmax = sqrt(dm2)
+      end subroutine max_cross_distance
+
