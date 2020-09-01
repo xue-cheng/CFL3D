@@ -76,7 +76,7 @@ c
      + sk(jdim,kdim,idim-1,5),si(jdim,kdim,idim,5),vol(jdim,kdim,idim-1)
      +,dtj(jdim,kdim,idim-1),x(jdim,kdim,idim),y(jdim,kdim,idim),
      + z(jdim,kdim,idim),vist3d(jdim,kdim,idim),
-     + vor(jdim-1,kdim-1,idim-1)
+     + vor(jdim-1,kdim-1,idim-1),hmax(jdim-1,kdim-1,idim-1)
       dimension damp1(jdim-1,kdim-1,idim-1),
      + fnu(0:jdim,0:kdim,0-iex3:idim+iex3),
      + timestp(jdim-1,kdim-1,idim-1),fd(jdim-1,kdim-1,idim-1)
@@ -1285,19 +1285,30 @@ c
         do i=1,idim-1
           do j=1,jdim-1
             do k=1,kdim-1
+c             DES(Delta_max)
               deltaj = 2.*vol(j,k,i)/(sj(j,k,i,4)+sj(j+1,k,i,4))
               deltak = 2.*vol(j,k,i)/(sk(j,k,i,4)+sk(j,k+1,i,4))
               deltai = 2.*vol(j,k,i)/(si(j,k,i,4)+si(j,k,i+1,4))
-              if(ides_sgs.eq.2) then
+              delta = ccmax(deltaj, deltak)
+              if( i2d .ne. 1 .and. iaxi2planeturb .ne. 1 ) then
+                delta = ccmax(delta, deltai)
+              endif
+c             store hmax for further usage              
+              hmax(j,k,i) = delta
+              if (ides_sgs.eq.2) then
+c             IDDES
                 dist = ccabs(smin(j,k,i))
-                hmax = ccmax(deltaj, deltak)
                 hmin = ccmin(deltaj, deltak)
                 if( i2d .ne. 1 .and. iaxi2planeturb .ne. 1 ) then
-                  hmax = ccmax(hmax,deltai)
                   hmin = ccmin(hmin,deltai)
                 end if
-                delta = ccmin(ccmax(.15*ccmax(dist,hmax),hmin),hmax)
+c  M. S. Gritskevich, A. V. Garbaruk, J. Schütze, and F. R. Menter
+c  “Development of DDES and IDDES Formulations for the k-ω Shear Stress Transport Model,”
+c  Flow, Turbulence and Combustion, vol. 88, no. 3, pp. 431–449, Apr. 2012, doi: 10.1007/s10494-011-9378-4.
+                delta = ccmax(.15*ccmax(dist,hmax(j,k,i)),hmax(j,k,i))
+                delta = ccmin(delta, hmax(j,k,i))
               elseif(ides_sgs.eq.3.or.ides_sgs.eq.4.and.i2d.ne.1) then 
+c             Vort-based
 c               ux:
 c                           1 = ux    4 = vx    7 = wx
 c                           2 = uy    5 = vy    8 = wy
@@ -1349,7 +1360,7 @@ c               unit vorticity vector
                 enddo
                 delta = osqrt3*dmax
                 if (ides_sgs.eq.4) then 
-                  if (ides.lt.2.or.fd(j,k,i).gt.0.99) then
+c  Shear Layer Adapt                  
                   ! VTM
 c               shat:
 c                      ux      (vx+uy)/2   (wx+uz)/2
@@ -1377,9 +1388,10 @@ c                  (wx+uz)/2   (wy+vz)/2       wz
                   fkh = fkh_min+fkh_slope*(VTM-fkh_a1)
                   fkh = ccmax(fkh_min,ccmax(fkh_max,fkh))
                   delta = delta*fkh
-                  endif
                 endif
               endif
+c store delta(subgrid length scale) in damp1
+c replaced by ddes(hybrid length scale) after DES calculation
               damp1(j,k,i) = delta
             enddo
           enddo
@@ -1414,7 +1426,7 @@ c
               fds_B   = fds_ch3*vort*ccmax(str,vort) /
      /                  ccmaxcr(velterm, 1e-20)
               fds_g   = ccmax(cctanh(fds_B**4),xminn)
-              fds_A1  = cdes*damp1(j,k,i)/fds_lt/fds_g-0.5
+              fds_A1  = cdes*hmax(j,k,i)/fds_lt/fds_g-0.5
               fds_A   = fds_ch2*ccmaxcr(fds_A1, 0.0)
               fds_r   = cctanh(fds_A**fds_ch1)
               fds_sigma(j,k,i) = cfds_smax*fds_r
@@ -1488,7 +1500,7 @@ c           rdt = vist3d*rd_deno/rho = turre*fv1*rd_deno
             rdl = fnu(j,k,i)*rd_deno
             ft = cctanh((cdt*cdt*rdt)**3)
             fl = cctanh((cdl*cdl*rdl)**10)
-            ra = 0.25-dist/hmax
+            ra = 0.25-dist/hmax(j,k,i)
             ra2 = ra**2
             fb = ccmincr(2*exp(-9.0*ra2), 1.0)
             fe2 = 1.0 - ccmax(ft, fl)
@@ -1503,7 +1515,7 @@ c           rdt = vist3d*rd_deno/rho = turre*fv1*rd_deno
             damp1(j,k,i) = fdtilde*(1.0+fe)*dist + 
      +        fd(j,k,i)*cdes*delta*Psi
             if (ifdsblend.eq.2) then
-              fds_sigma(j,k,i) = 1.0-fd(j,k,i)
+              fds_sigma(j,k,i) = fdtilde
             endif
           enddo
         enddo
