@@ -161,7 +161,7 @@ contains
 #endif  
     this%sigma = sigma
     call this%update_faces()
-    !call this%interpolate()
+    call this%interpolate()
   end subroutine fds_sigma_update
 
   subroutine fds_sigma_dump(this, nt, x, y, z)
@@ -199,7 +199,7 @@ contains
   subroutine fds_sigma_update_i(this)
     implicit none
     class(fds_sigma_t), intent(inout) :: this
-    integer :: i,id0,id1,id2
+    integer :: j,k,i,id0,id1,id2
     id0 = this%idim
     id1 = id0-1
     id2 = id1-1
@@ -207,44 +207,56 @@ contains
       this%sig_i = this%sigma
     else
       do i = 2,id1
-        this%sig_i(:,:,i) = 0.5*(this%sigma(:,:,i) + this%sigma(:,:,i-1))
+        do k = 1,this%kdim
+          do j = 1,this%jdim
+            this%sig_i(j,k,i) = cmax(this%sigma(j,k,i), this%sigma(j,k,i-1))
+          enddo
+        enddo
       enddo
-      this%sig_i(:,:,  1) = 0.5*(3*this%sigma(:,:,  1) - this%sigma(:,:,  2))
-      this%sig_i(:,:,id0) = 0.5*(3*this%sigma(:,:,id1) - this%sigma(:,:,id2))
+      this%sig_i(:,:,  1) = this%sigma(:,:,  1)
+      this%sig_i(:,:,id0) = this%sigma(:,:,id1)
     endif
   end subroutine fds_sigma_update_i
 
   subroutine fds_sigma_update_j(this)
     class(fds_sigma_t), intent(inout) :: this
-    integer :: j, jd0, jd1, jd2
+    integer :: j,k,i,jd0,jd1,jd2
     jd0 = this%jdim
     jd1 = jd0-1
     jd2 = jd1-1
     if(jd2.le.0) then
       this%sig_j = this%sigma
     else
-      do j = 2,jd0
-        this%sig_j(j,:,:) = 0.5*(this%sigma(j,:,:) + this%sigma(j-1,:,:))
+      do i = 1,this%idim
+        do k = 1,this%kdim
+          do j = 2,jd0
+            this%sig_j(j,k,i) = cmax(this%sigma(j,k,i), this%sigma(j-1,k,i))
+          enddo
+        enddo
       enddo
-      this%sig_j(  1,:,:) = 0.5*(3*this%sigma(  1,:,:)-this%sigma(  2,:,:))
-      this%sig_j(jd0,:,:) = 0.5*(3*this%sigma(jd1,:,:)-this%sigma(jd2,:,:))
+      this%sig_j(  1,:,:) = this%sigma(  1,:,:)
+      this%sig_j(jd0,:,:) = this%sigma(jd1,:,:)
     endif
   end subroutine fds_sigma_update_j
 
   subroutine fds_sigma_update_k(this)
     class(fds_sigma_t), intent(inout) :: this
-    integer :: k, kd0, kd1, kd2
+    integer :: j,k,i,kd0,kd1,kd2
     kd0 = this%kdim
     kd1 = kd0-1
     kd2 = kd1-1
     if (kd2.le.0) then
       this%sig_k = this%sigma
     else
-      do k = 2,kd0
-        this%sig_k(:,k,:) = 0.5*(this%sigma(:,k,:) + this%sigma(:,k-1,:))
+      do i = 1,this%idim
+        do k = 2,kd0
+          do j = 1,this%jdim
+            this%sig_k(j,k,i) = cmax(this%sigma(j,k,i), this%sigma(j,k-1,i))
+          enddo
+        enddo
       enddo
-      this%sig_k(:,  1,:)= 0.5*(3*this%sigma(:,  1,:)-this%sigma(:,  2,:))
-      this%sig_k(:,kd0,:)= 0.5*(3*this%sigma(:,kd1,:)-this%sigma(:,kd2,:))
+      this%sig_k(:,  1,:)= this%sigma(:,  1,:)
+      this%sig_k(:,kd0,:)= this%sigma(:,kd1,:)
     endif
   end subroutine fds_sigma_update_k
 
