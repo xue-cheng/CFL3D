@@ -1302,7 +1302,8 @@ c  M. S. Gritskevich, A. V. Garbaruk, J. Schütze, and F. R. Menter
 c  “Development of DDES and IDDES Formulations for the k-ω Shear Stress Transport Model,”
 c  Flow, Turbulence and Combustion, vol. 88, no. 3, pp. 431–449, Apr. 2012, doi: 10.1007/s10494-011-9378-4.
                 delta = ccmin(.15*ccmax(dist,hmax(j,k,i)),hmax(j,k,i))
-              elseif(ides_sgs.eq.3.or.ides_sgs.eq.4.and.i2d.ne.1) then 
+              elseif(ides_sgs.eq.3.or.ides_sgs.eq.4.and.
+     .          i2d.ne.1.and.real(vor(j,k,i)).gt.real(xminn)) then
 c             Vort-based
 c               ux:
 c                           1 = ux    4 = vx    7 = wx
@@ -1312,7 +1313,7 @@ c               unit vorticity vector
                 vvor(1) = ux(j,k,i,8) - ux(j,k,i,6)
                 vvor(2) = ux(j,k,i,3) - ux(j,k,i,7)
                 vvor(3) = ux(j,k,i,4) - ux(j,k,i,2)
-                uvor = vvor / norm2(vvor) ! normalized
+                uvor = vvor / vor(j,k,i) ! normalized
                 rn(1,1) = x(j  ,k  ,i  )
                 rn(1,2) = x(j+1,k  ,i  )
                 rn(1,3) = x(j  ,k+1,i  )
@@ -1394,19 +1395,14 @@ c
         do i=1,idim-1
           do j=1,jdim-1
             do k=1,kdim-1
-              vort2 = 
-     +          (ux(j,k,i,8)-ux(j,k,i,6))**2 +
-     +          (ux(j,k,i,3)-ux(j,k,i,7))**2 +
-     +          (ux(j,k,i,4)-ux(j,k,i,2))**2
-c
               str2 = 
      +          (ux(j,k,i,8)+ux(j,k,i,6))**2 +
      +          (ux(j,k,i,3)+ux(j,k,i,7))**2 +
      +          (ux(j,k,i,4)+ux(j,k,i,2))**2 +
      +          2.0*(ux(j,k,i,1)**2+ux(j,k,i,5)**2+ux(j,k,i,9)**2)
-              vort    = sqrt(vort2)
+              vort    = vor(j,k,i)
               str     = sqrt(str2)
-              velterm = (vort2+str2)/2
+              velterm = (vort*vort+str2)/2
               fds_K   = ccmax(sqrt(velterm),ccmax(0.1*uref,xminn))
               chi     = turre(j,k,i)/fnu(j,k,i)
               fv1     = chi**3/(chi**3+cv1**3)
