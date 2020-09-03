@@ -1,3 +1,5 @@
+# DES-Enhanced CFL3D
+
 ## CFL3D
 
 CFL3D 
@@ -24,3 +26,15 @@ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
 WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
 License for the specific language governing permissions and limitations 
 under the License.
+
+## Modifications
+ - Set default value of `ifullns` to `1`
+ - IDDES-SA Model `ides=10`
+ - Central-upwind blending for FDS (Roe) scheme `ifdsblend`
+   - `1` = constant
+   - `2` = `fd` based adaptive blending
+   - `3` = Travin et al.
+
+## TODO
+ - Share-Layer-Adapted IDDES-SA (in progress)
+ - IDDES for two-eq Turb. Models
