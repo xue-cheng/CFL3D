@@ -8,9 +8,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Cmake Build type")
 endif(NOT CMAKE_BUILD_TYPE)
-if(WIN32)
-    message(FATAL_ERROR "Windows is not supported, CFL3D can be compiled in WSL.")
-endif(WIN32)
+
 ###########################################################################
 # Options
 option(SINGLE_PRECISION  "create single precision executables." OFF)
@@ -43,6 +41,11 @@ endif(EXISTS ${ADDTIONAL_INCLUDE_DIR})
 if(NO_REDIRECT)
   add_compile_definitions(NOREDIRECT) 
 endif(NO_REDIRECT)
+
+if(WIN32)
+set(WITH_FASTIO OFF CACHE BOOL "build with fast I/O option for MPI versions (N/A on windows)" FORCE) 
+  set(NO_REDIRECT ON CACHE BOOL "disallow redirected input file (N/A on windows)" FORCE)
+endif(WIN32)
 
 # CGNS
 if(WITH_CGNS)
@@ -107,30 +110,37 @@ if(NOT SINGLE_PRECISION)
 endif(NOT SINGLE_PRECISION)
 
 
-if(MINGW)
-  add_link_options("LINKER:-Wl,--allow-multiple-definition")
-else(MINGW)
-	add_link_options("LINKER:-z,muldefs")
-endif(MINGW)
-
 ## project compiler dependent settings
-if(CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
-  add_compile_definitions(INTEL)
-  add_compile_options(-xHost -traceback -fpe0 -ip -fno-alias)
-  # Single Precision
-  if(NOT SINGLE_PRECISION)
-    add_compile_options(-r8)
-  endif(NOT SINGLE_PRECISION)
-	# no `-w` option, do not turn warnings off.
-elseif(CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
-  add_compile_options( -march=native -Wno-align-commons -fbacktrace)
-  # Single Precision
-  if(NOT SINGLE_PRECISION)
-    add_compile_options(-fdefault-real-8)
-  endif(NOT SINGLE_PRECISION)
-else()
-	message(FATAL_ERROR "Unknown Compiler ID: " ${CMAKE_Fortran_COMPILER_ID})
-endif()
+if(WIN32) 
+  if(CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
+    add_compile_definitions(INTEL)
+    add_compile_options(/QxHost /traceback /fpe:0 /Qip /Oa)
+    if(NOT SINGLE_PRECISION)
+      add_compile_options(/real-size:64)
+    endif(NOT SINGLE_PRECISION)
+  else()
+    message(FATAL_ERROR "Unknown Compiler ID: " ${CMAKE_Fortran_COMPILER_ID})
+  endif()
+else(WIN32)
+  add_link_options("LINKER:-z,muldefs")
+  if(CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
+    add_compile_definitions(INTEL)
+    add_compile_options(-xHost -traceback -fpe0 -ip -fno-alias)
+    # Single Precision
+    if(NOT SINGLE_PRECISION)
+      add_compile_options(-r8)
+    endif(NOT SINGLE_PRECISION)
+    # no `-w` option, do not turn warnings off.
+  elseif(CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
+    add_compile_options( -march=native -Wno-align-commons -fbacktrace)
+    # Single Precision
+    if(NOT SINGLE_PRECISION)
+      add_compile_options(-fdefault-real-8)
+    endif(NOT SINGLE_PRECISION)
+  else()
+    message(FATAL_ERROR "Unknown Compiler ID: " ${CMAKE_Fortran_COMPILER_ID})
+  endif()
+endif(WIN32)
 
 # it seems always use P3D_SINGLE in original Install script
 add_compile_definitions(P3D_SINGLE)
