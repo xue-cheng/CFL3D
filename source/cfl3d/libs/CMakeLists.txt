@@ -68,7 +68,7 @@ set(COMMON_F77_SRC
   my_flush.F      bc2016.F        gfluxv1.F       hfluxv1.F
   ffluxv1.F       sijrate2d.F     threeeqn.F      lesdiag.F
   sijrate3d.F     foureqn.F       bc2026.F        bc2019.F
-  bc2010.F	      bc2036.F        u_doubleprime.F
+  bc2010.F	      bc2036.F        u_doubleprime.F dessla.F
 )
 
 set(COMMON_F90_SRC

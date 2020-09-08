@@ -146,7 +146,7 @@ c
      .                geom_img,surf_img,xrotrate_img,yrotrate_img,
      .                zrotrate_img
       common /cgns/ icgns,iccg,ibase,nzones,nsoluse,irind,jrind,krind
-      common /des/ cdes,ides,cddes,ides_sgs
+      common /des/ cdes,ides,cddes,ides_sla
       common /slasgs/ fkh_min, fkh_max, fkh_a1, fkh_a2
       common /cfl/ dt0,dtold
       common /avgdata/ xnumavg,iteravg,xnumavg2,ipertavg,iclcd,isubit_r
@@ -609,7 +609,7 @@ c
          work(nlast+185)= cfdsblend
          work(nlast+186)= cfds_smin
          work(nlast+187)= cfds_smax
-         work(nlast+188)= ides_sgs
+         work(nlast+188)= ides_sla
          work(nlast+189)= fkh_min
          work(nlast+190)= fkh_max
          work(nlast+191)= fkh_a1
@@ -981,7 +981,7 @@ c
          cfdsblend = work(nlast+185)
          cfds_smin = work(nlast+186)
          cfds_smax = work(nlast+187)
-         ides_sgs  = int(work(nlast+188))
+         ides_sla  = int(work(nlast+188))
          fkh_min   = work(nlast+189)
          fkh_max   = work(nlast+190)
          fkh_a1    = work(nlast+191)

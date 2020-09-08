@@ -262,7 +262,7 @@ c
       allocatable :: zorig(:)
       allocatable :: zorig0(:)
 c
-      common /des/ cdes,ides,cddes,ides_sgs
+      common /des/ cdes,ides,cddes,ides_sla
       common /params/ lmaxgr,lmaxbl,lmxseg,lmaxcs,lnplts,lmxbli,lmaxxe,
      .                lnsub1,lintmx,lmxxe,liitot,isum,lncycm,
      .                isum_n,lminnode,isumi,isumi_n,lmptch,

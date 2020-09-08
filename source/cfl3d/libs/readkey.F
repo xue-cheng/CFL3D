@@ -47,7 +47,7 @@ c
       dimension nou(nbuf)
 c
       common /unst/ time,cfltau,ntstep,ita,iunst,cfltau0,cfltauMax
-      common /des/ cdes,ides,cddes,ides_sgs
+      common /des/ cdes,ides,cddes,ides_sla
       common /avgdata/ xnumavg,iteravg,xnumavg2,ipertavg,iclcd,isubit_r
       common /moov/movie,nframes,icall1,lhdr,icoarsemovie,i2dmovie
       common /ginfo2/ lq2avg,iskip_blocks,inc_2d(3),inc_coarse(3)
@@ -453,7 +453,7 @@ c     Hybrid SGS, 0=DES Model Default
 c       1 = hmax = max(dx,dy,dz) [default for DES and DDES models]
 c       2 = min(max(.15*max(drans,hmax),hmin),hmax) [default for SA-IDDES]
 c
-      ides_sgs = 0
+      ides_sla = 0
       nkey     = nkey + 1
 
 c
@@ -1542,9 +1542,9 @@ c
          lc2 = lc2 +1
          read(inpstr(lc2:lcl),*) realval(1)
          cddes = realval(1)
-      else if (inpstr(lc1:lc2).eq.'ides_sgs') then
+      else if (inpstr(lc1:lc2).eq.'ides_sla') then
         lc2 = lc2 +1
-        read(inpstr(lc2:lcl),*) ides_sgs
+        read(inpstr(lc2:lcl),*) ides_sla
 c
       else if (inpstr(lc1:lc2).eq.'iteravg') then
          lc2 = lc2 +1
