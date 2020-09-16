@@ -965,7 +965,7 @@ c
      .      (nt.eq.ntstep)  .or.     ! final time step
      .      (nt.eq.nt/nwrest*nwrest) ! write restart
      o    )) then
-        call fds_sigma(nbl)%dump(nt, x, y, z)
+        call fds_sigma(nbl)%dump(nres, x, y, z)
       endif
 
 c
