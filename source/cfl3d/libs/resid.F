@@ -35,6 +35,7 @@ c
       use module_kwstm, only: kws_main,kws_dump_movie
 #   endif
       use module_fds_blend
+      use module_des_save
 c
 c     $Id$
 c
@@ -489,7 +490,7 @@ c      allocate(desq(jdim-1,kdim-1,idim-1,9))
      + wk(iwk18),ntime,tj0,tk0,ti0,nbl,qj0,qk0,qi0,blank,iover,sumn(1),
      + sumn(2),negn(1),negn(2),xib2,volj0,volk0,voli0,nou,bou,nbuf,
      + ibufdim,iex,iex2,iex3,bcj,bck,bci,ux,wk(iwk19),nummem,res(1,4),
-     + isarcnum, wk_sigma)
+     + isarcnum, wk_sigma, desgeo(nbl))
       if (ifdsblend.ge.2) call fds_sigma(nbl)%update(wk_sigma)
       else if (ivmx .ge. 6 .and. ivmx .le. 16) then
 c   two-equation turb model

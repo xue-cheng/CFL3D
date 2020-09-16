@@ -35,7 +35,6 @@ module module_fds_blend
     real(wp)   , allocatable, public, save:: wk_sigma(:)
 #endif
   integer, public, save :: nwk_sigma
-  private :: cmax
 contains
   
   subroutine init_fds_blend(nblock, levelg, mblk2nd, jdimg, kdimg, idimg)
@@ -200,6 +199,11 @@ contains
     implicit none
     class(fds_sigma_t), intent(inout) :: this
     integer :: j,k,i,id0,id1,id2
+#ifdef CMPLX
+    complex(wp):: ccmax
+#else
+    real(wp)   :: ccmax
+#endif
     id0 = this%idim
     id1 = id0-1
     id2 = id1-1
@@ -209,7 +213,7 @@ contains
       do i = 2,id1
         do k = 1,this%kdim
           do j = 1,this%jdim
-            this%sig_i(j,k,i) = cmax(this%sigma(j,k,i), this%sigma(j,k,i-1))
+            this%sig_i(j,k,i) = ccmax(this%sigma(j,k,i), this%sigma(j,k,i-1))
           enddo
         enddo
       enddo
@@ -221,6 +225,11 @@ contains
   subroutine fds_sigma_update_j(this)
     class(fds_sigma_t), intent(inout) :: this
     integer :: j,k,i,jd0,jd1,jd2
+#ifdef CMPLX
+    complex(wp):: ccmax
+#else
+    real(wp)   :: ccmax
+#endif
     jd0 = this%jdim
     jd1 = jd0-1
     jd2 = jd1-1
@@ -230,7 +239,7 @@ contains
       do i = 1,this%idim
         do k = 1,this%kdim
           do j = 2,jd0
-            this%sig_j(j,k,i) = cmax(this%sigma(j,k,i), this%sigma(j-1,k,i))
+            this%sig_j(j,k,i) = ccmax(this%sigma(j,k,i), this%sigma(j-1,k,i))
           enddo
         enddo
       enddo
@@ -242,6 +251,11 @@ contains
   subroutine fds_sigma_update_k(this)
     class(fds_sigma_t), intent(inout) :: this
     integer :: j,k,i,kd0,kd1,kd2
+#ifdef CMPLX
+    complex(wp):: ccmax
+#else
+    real(wp)   :: ccmax
+#endif
     kd0 = this%kdim
     kd1 = kd0-1
     kd2 = kd1-1
@@ -251,7 +265,7 @@ contains
       do i = 1,this%idim
         do k = 2,kd0
           do j = 1,this%jdim
-            this%sig_k(j,k,i) = cmax(this%sigma(j,k,i), this%sigma(j,k-1,i))
+            this%sig_k(j,k,i) = ccmax(this%sigma(j,k,i), this%sigma(j,k-1,i))
           enddo
         enddo
       enddo
@@ -293,21 +307,4 @@ contains
     sig = this%sig_k(:,:,i:i+ni-1)
   end subroutine fds_sigma_sub_k
   
-!===============================================================================
-! Private Methods
-!===============================================================================
-  
-  function cmax(a,b) result(c)
-#ifdef CMPLX
-    complex(wp) :: a,b,c
-    if (real(a).gt.real(b)) then 
-      c = a
-    else
-      c = b
-    endif
-#else 
-    real(wp)    :: a,b,c
-    c = max(a,b)
-#endif  
-  end function
 end module module_fds_blend

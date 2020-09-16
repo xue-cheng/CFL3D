@@ -25,7 +25,7 @@ c
      + fx,workx,by,cy,dy,fy,worky,bz,cz,dz,fz,workz,ntime,
      + tj0,tk0,ti0,nbl,qj0,qk0,qi0,blank,iover,sumn1,sumn2,negn1,negn2,
      + tursav2,volj0,volk0,voli0,nou,bou,nbuf,ibufdim,iex,iex2,iex3,
-     + bcj,bck,bci,ux,vx,nummem,fd,isarcnum,fds_sigma)
+     + bcj,bck,bci,ux,vx,nummem,fd,isarcnum,fds_sigma,des_geom)
 c
 c     $Id$
 c
@@ -35,6 +35,7 @@ c     1-equation Spalart turbulence model (ivisc=5)
 c     (reprogrammed by Rumsey for CFL3D 1/92)
 c***********************************************************************
 c
+       use module_des_save
 #   ifdef CMPLX
       implicit complex(a-h,o-z)
 #   endif
@@ -42,6 +43,7 @@ c
       character*120 bou(ibufdim,nbuf)
 c
       dimension nou(nbuf)
+      type(des_geom_t) :: des_geom
 c
       common /des/ cdes,ides,cddes,ides_sla
       common /info/ title(20),rkap(3),xmach,alpha,beta,dt,fmax,nit,ntt,
@@ -1270,22 +1272,28 @@ c    Add source term to RHS
 c
 c calculate hmax
 c
-      if (ides .gt. 0) then
-        do i=1,idim-1
-          do j=1,jdim-1
-            do k=1,kdim-1
-              deltaj = 2.*vol(j,k,i)/(sj(j,k,i,4)+sj(j+1,k,i,4))
-              deltak = 2.*vol(j,k,i)/(sk(j,k,i,4)+sk(j,k+1,i,4))
-              deltai = 2.*vol(j,k,i)/(si(j,k,i,4)+si(j,k,i+1,4))
-              delta = ccmax(deltaj, deltak)
-              if( i2d .ne. 1 .and. iaxi2planeturb .ne. 1 ) then
-                delta = ccmax(delta, deltai)
-              endif
-c store in damp1, will be overwritten by DES calculation    
-              damp1(j,k,i) = delta
-            enddo
-          enddo
-        enddo
+c      if (ides .gt. 0) then
+c        do i=1,idim-1
+c          do j=1,jdim-1
+c            do k=1,kdim-1
+c              deltaj = 2.*vol(j,k,i)/(sj(j,k,i,4)+sj(j+1,k,i,4))
+c              deltak = 2.*vol(j,k,i)/(sk(j,k,i,4)+sk(j,k+1,i,4))
+c              deltai = 2.*vol(j,k,i)/(si(j,k,i,4)+si(j,k,i+1,4))
+c              delta = ccmax(deltaj, deltak)
+c              if( i2d .ne. 1 .and. iaxi2planeturb .ne. 1 ) then
+c                delta = ccmax(delta, deltai)
+c              endif
+cc store in damp1, will be overwritten by DES calculation    
+c              damp1(j,k,i) = delta
+c            enddo
+c          enddo
+c        enddo
+c      endif
+      call des_geom%update_h(jdim,kdim,idim,sj,sk,si,vol,
+     ,                       i2d.eq.1.or.iaxi2planeturb.eq.1,
+     ,                       iunst.ne.0)
+      if (ides_sla.ne.0) then 
+        call des_geom%update_r(jdim,kdim,idim,x,y,z,iunst.ne.0)
       endif
 c
 c     FDS Blend
@@ -1311,7 +1319,7 @@ c
               fds_B   = fds_ch3*vort*ccmax(str,vort) /
      /                  ccmaxcr(velterm, 1e-20)
               fds_g   = ccmax(cctanh(fds_B**4),xminn)
-              fds_A1  = cdes*damp1(j,k,i)/fds_lt/fds_g-0.5
+              fds_A1  = cdes*des_geom%hmax(j,k,i)/fds_lt/fds_g-0.5
               fds_A   = fds_ch2*ccmaxcr(fds_A1, 0.0)
               fds_r   = cctanh(fds_A**fds_ch1)
               fds_sigma(j,k,i) = cfds_smax*fds_r
@@ -1326,10 +1334,14 @@ c     DES
       do i=1,idim-1
         do j=1,jdim-1
           do k=1,kdim-1
-            delta = damp1(j,k,i)
+            delta = des_geom%hmax(j,k,i)
             if(ides_sla.gt.0) then 
-              call dessla(delta,j,k,i,jdim,kdim,idim,iex,iex2,iex3,
-     .                    x,y,z,vol,sj,sk,si,vor,ux,turre,fnu)
+              call dessla(
+     .          delta,des_geom%rn(:,:,j,k,i),
+     .          vor(j,k,i),fnu(j,k,i),turre(j,k,i),
+     .          ux(j,k,i,1),ux(j,k,i,2),ux(j,k,i,3),
+     .          ux(j,k,i,4),ux(j,k,i,5),ux(j,k,i,6),
+     .          ux(j,k,i,7),ux(j,k,i,8),ux(j,k,i,9))
             endif
             damp1(j,k,i) = ccmin(ccabs(smin(j,k,i)),cdes*delta)
           enddo
@@ -1340,10 +1352,14 @@ c     DDES (TCFD 20:181-195, 2006)
       do i=1,idim-1
         do j=1,jdim-1
           do k=1,kdim-1
-            delta = damp1(j,k,i)
+            delta = des_geom%hmax(j,k,i)
             if(ides_sla.gt.0) then 
-              call dessla(delta,j,k,i,jdim,kdim,idim,iex,iex2,iex3,
-     .                    x,y,z,vol,sj,sk,si,vor,ux,turre,fnu)
+              call dessla(
+     .          delta,des_geom%rn(:,:,j,k,i),
+     .          vor(j,k,i),fnu(j,k,i),turre(j,k,i),
+     .          ux(j,k,i,1),ux(j,k,i,2),ux(j,k,i,3),
+     .          ux(j,k,i,4),ux(j,k,i,5),ux(j,k,i,6),
+     .          ux(j,k,i,7),ux(j,k,i,8),ux(j,k,i,9))
             endif
             dist = ccabs(smin(j,k,i))
             velterm=ux(j,k,i,1)**2 + ux(j,k,i,2)**2 + ux(j,k,i,3)**2 +
@@ -1358,9 +1374,7 @@ c     DDES (TCFD 20:181-195, 2006)
             else
                damp1(j,k,i) = ccabs(smin(j,k,i))
             end if
-            if (ifdsblend.eq.2) then
-              fds_sigma(j,k,i) = 1.0-fd(j,k,i)
-            endif
+            if (ifdsblend.eq.2) fds_sigma(j,k,i) = 1.0-fd(j,k,i)
           enddo
         enddo
       enddo
@@ -1370,15 +1384,21 @@ c     IDDES
         do j=1,jdim-1
           do k=1,kdim-1
             dist = ccabs(smin(j,k,i))
-            delta = damp1(j,k,i)
+            delta = des_geom%hmax(j,k,i)
             if(ides_sla.gt.0) then 
-              call dessla(delta,j,k,i,jdim,kdim,idim,iex,iex2,iex3,
-     .                    x,y,z,vol,sj,sk,si,vor,ux,turre,fnu)
+              call dessla(
+     .          delta,des_geom%rn(:,:,j,k,i),
+     .          vor(j,k,i),fnu(j,k,i),turre(j,k,i),
+     .          ux(j,k,i,1),ux(j,k,i,2),ux(j,k,i,3),
+     .          ux(j,k,i,4),ux(j,k,i,5),ux(j,k,i,6),
+     .          ux(j,k,i,7),ux(j,k,i,8),ux(j,k,i,9))
             endif
 c  M. S. Gritskevich, A. V. Garbaruk, J. Schütze, and F. R. Menter
 c  “Development of DDES and IDDES Formulations for the k-ω Shear Stress Transport Model,”
 c  Flow, Turbulence and Combustion, vol. 88, no. 3, pp. 431–449, Apr. 2012, doi: 10.1007/s10494-011-9378-4.
-            delta = ccmin(.15*ccmax(dist,damp1(j,k,i)),delta)
+            da = ccmax(0.15*ccmax(dist,des_geom%hmax(j,k,i)),
+     .                 des_geom%hmin(j,k,i))
+            delta = ccmin(da, delta)
             dist = ccabs(smin(j,k,i))
             velterm=ux(j,k,i,1)**2 + ux(j,k,i,2)**2 + ux(j,k,i,3)**2 +
      +              ux(j,k,i,4)**2 + ux(j,k,i,5)**2 + ux(j,k,i,6)**2 +
@@ -1404,7 +1424,7 @@ c           rdt = vist3d*rd_deno/rho = turre*fv1*rd_deno
             rdl = fnu(j,k,i)*rd_deno
             ft = cctanh((cdt*cdt*rdt)**3)
             fl = cctanh((cdl*cdl*rdl)**10)
-            ra = 0.25-dist/damp1(j,k,i)
+            ra = 0.25-dist/des_geom%hmax(j,k,i)
             ra2 = ra**2
             fb = ccmincr(2*exp(-9.0*ra2), 1.0)
             fe2 = 1.0 - ccmax(ft, fl)
@@ -1418,9 +1438,7 @@ c           rdt = vist3d*rd_deno/rho = turre*fv1*rd_deno
             fd(j,k,i) = 1.0-fdtilde
             damp1(j,k,i) = fdtilde*(1.0+fe)*dist + 
      +        fd(j,k,i)*cdes*delta*Psi
-            if (ifdsblend.eq.2) then
-              fds_sigma(j,k,i) = fdtilde
-            endif
+            if (ifdsblend.eq.2) fds_sigma(j,k,i) = fdtilde
           enddo
         enddo
       enddo

@@ -78,6 +78,7 @@ c
       use module_kwstm, only:kws_get_nummem
 #   endif
       use module_fds_blend
+      use module_des_save
 c
 c     $Id$
 c
@@ -748,6 +749,7 @@ c     initialize fds blend
 c***********************************************************************
 c      
       call init_fds_blend(nblock,levelg,mblk2nd,jdimg,kdimg,idimg)
+      call init_des_info(nblock)
 c
 c***********************************************************************
 c     mesh sequencing - cycle through mesh sequences, coarser to finer
