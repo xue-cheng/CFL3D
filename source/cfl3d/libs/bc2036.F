@@ -32,10 +32,10 @@ c
 c     $Id$
 c
 c***********************************************************************
-c     Purpose:  Set solid wall BC (viscous wall)
+c     Purpose:  Set pulsed wall jet BC (viscous wall)
 c               with 9 pieces of auxiliary data:
 c
-c     This is a mod to bc2004, by Hal Carlson
+c     This is a mod to bc2016, by XUE Cheng
 c
 c           1) Twtype:
 c              Twtype > 0 (fixed wall temperature Tw/Tinf = Twtype)
@@ -43,7 +43,7 @@ c              Twtype = 0 (adiabatic wall)
 c              Twtype < 0 (fixed wall temperature = stagnation temp)
 c
 c           2) cq0  = base component of surface jet
-c           3) cqa = amplitude component of surface jet
+c           3) cqu = unsteady component of surface jet
 c              Set surface jet boundary conditions via mass-flow 
 c              coefficient:
 c                                             (rho * u)_jet
@@ -52,30 +52,42 @@ c                                           (rho * u)_infinity
 c           4) sjetx = direction number for surface jet (x-direction)
 c           5) sjety = direction number for surface jet (y-direction)
 c           6) sjetz = direction number for surface jet (z-direction)
-c           7) t_cyc = reduced frequency of unsteady jet
-c              t_cyc > 0 (periodic)
-c              t_cyc = 0 (pulse on after d_cyc)
-c              t_cyc < 0 (pulse on between (abs(t_cyc), abs(t_cyc)+d_cyc))
+c           7) t_cyc = period or start time, see d_cyc
 c           8) t_s99 = time of the pulsed jet achieving its maximum value
-c              t_s99 = 0 (step function)
-c              t_s99 > 0 (tanh function)
-c              t_s99 < 0 (linear function)
-c           9) d_cyc = duty cycle of the pulse
+c           9) d_cyc :
+c              d_cyc > 0 pulsed jet
+c              d_cyc = 0 one-shot jet
+c              d_cyc < 0 one-minus-cosine
+c             a) pulsed jet (d_cyc>0):
+c                d_cyc = duty cycle of the pulse between (0, 1)
+c                t_cyc = period of unsteady jet
+c                t_s99 = time of the pulsed jet achieving its maximum value
+c                  t_s99 = 0 => step function
+c                  t_s99 > 0 => tanh function
+c                  t_s99 < 0 => linear function
+c             b) one-shot jet (d_cyc = 0):
+c                t < t_cyc       => cqt = cq0
+c                t > t_cyc+t_s99 => cqt = cq0+cqu
+c                t_cyc = jet start time
+c                t_s99 = time of the pulsed jet achieving its maximum value
+c                  t_s99 = 0 => step function
+c                  t_s99 > 0 => tanh function
+c                  t_s99 < 0 => linear function
+c             c) one-minus-cosine jet (d_cyc < 0):
+c                d_cyc = -1 => continuous
+c                d_cyc = -2 => single wave
+c                t_s99 = half period
+c                t_cyc = jet start time
+c                if t < t_cyc:
+c                  cqt = cq0
+c                else:
+c                  cqt = cq0 + 0.5(1-cos)*cqu
 c              NOTES:
 c              1.  input direction numbers do not have to be normalized
 c              2.  Set (sjetx,sjety,sjetz) = (0.0,0.0,0.0) for a
 c                  wall-normal surface jet.  In this case,
-c                  cq > 0 ==> flow into domain at i,j,k=1,1,1
-c                  cq > 0 ==> flow out of domain at i,j,k=idim,jdim,kdim
-c                  cq < 0 ==> flow out of domain at i,j,k=1,1,1
-c                  cq < 0 ==> flow in to domain at i,j,k=idim,jdim,kdim
-c
-c
-c           When wall functions are employed (iwf=1, resulting when ivisc
-c           parameters are negative on input), code uses PAB3D type
-c           (see NASA TP 3480).  ONLY the boundary condition values
-c           of the turb viscosity vist3d (=vj0,vk0,vi0) are modified.  No
-c           changes are made to vist3d in the interior.
+c                  cq > 0 ==> injection
+c                  cq < 0 ==> suction
 c
 c***********************************************************************
 c
@@ -118,13 +130,29 @@ c
       common /sklton/ isklton
       common /wallfun/ iwf(3)
       common /unst/ time,cfltau,ntstep,ita,iunst,cfltau0,cfltauMax
-c  
-c..  data statement (for use with wall functions)
-      data a0/2.354039, 0.1179840, -4.2899192e-04, 2.0404148e-06,
-     1       -5.1775775e-09, 6.2687308e-12, -2.916958e-15/
-      data a1/5.777191, 6.8756983e-02, -7.1582745e-06, 1.5594904e-09,
-     1        -1.4865778e-13/
-      data a2/31.08654, 5.0429072e-02, -2.0072314e-8/
+      common /walljet/ turwj(7)
+      common /ivals/ p0,rho0,c0,u0,v0,w0,et0,h0,pt0,rhot0,qiv(5),
+     .        tur10(7)
+
+c   Check inputs
+
+      if (ivmx.ge.2.and.(ivmx.lt.5.or.ivmx.gt.7)) then 
+        nou(1) = min(nou(1)+1,ibufdim)
+        write(bou(nou(1),1),*)' stopping in bc2036...',
+     .    ' invalid turb. model, ivmx=', ivmx, 
+     .    ' must be on of 5, 6 or 7'
+        call termn8(myid,-1,ibufdim,nbuf,bou,nou)
+      endif
+
+      if ((nface.eq.1.or.nface.eq.2).and.(iwf(1).ne.0).or.
+     .    (nface.eq.3.or.nface.eq.4).and.(iwf(2).ne.0).or.
+     .    (nface.eq.5.or.nface.eq.6).and.(iwf(3).ne.0)) then 
+        nou(1) = min(nou(1)+1,ibufdim)
+        write(bou(nou(1),1),*)' stopping in bc2036...',
+     .    ' wall function not implemented'
+        call termn8(myid,-1,ibufdim,nbuf,bou,nou)
+      endif
+
 c   *********
 c
       jdim1 = jdim-1
@@ -163,32 +191,8 @@ c     read data
       t_s99         = bcdata(kk,ii,ip,8)
       d_cyc         = bcdata(kk,ii,ip,9)
 
-      if ((d_cyc.ge.1.).or.(d_cyc.le.0.)) then
-            nou(1) = min(nou(1)+1,ibufdim)
-            write(bou(nou(1),1),*)' stopping in bc2036...',
-     .            ' invalid d_cyc, must between (0, 1)'
-            call termn8(myid,-1,ibufdim,nbuf,bou,nou)
-      end if
-      pb            = q(1,k,i,5)
-      dpb           = q(2,k,i,5)-q(1,k,i,5)
-      pb            = pb - dpb/2.0
-      if (real(pb).le.0.0)  pb = q(1,k,i,5)
-      c2            = gamma*q(1,k,i,5)/q(1,k,i,1)
-      if (real(bcdata(kk,ii,ip,1)) .gt. 0.) then
-        c2  = bcdata(kk,ii,ip,1)
-      else if (real(bcdata(kk,ii,ip,1)) .lt. 0.) then
-        c2=1.e0+gm1*0.5e0*xmach*xmach
-      else
-        if (iuns.gt.0 .and. irelv.gt.0) then
-        xm2 = (q(1,k,i,2)-xtbj(k,i,1,1))**2+
-     +        (q(1,k,i,3)-xtbj(k,i,2,1))**2+
-     +        (q(1,k,i,4)-xtbj(k,i,3,1))**2
-        else
-        xm2 = q(1,k,i,2)**2+q(1,k,i,3)**2+q(1,k,i,4)**2
-        end if
-        xm2 = xm2/c2
-        c2  = c2*(1.+0.5*gm1*xm2)
-      end if
+      call bc2036_check(t_cyc,t_s99,d_cyc,nou,bou,ibufdim,nbuf)
+      
 c
 c     surface velocities
 c
@@ -200,29 +204,54 @@ c     for dynamic mesh, set velocity at wall to grid velocity at wall
 c     if irelv > 0; otherwise, set to zero
 c
       if (iuns.gt.0 .and. irelv.gt.0) then
-      uub = xtbj(k,i,1,1)
-      vvb = xtbj(k,i,2,1)
-      wwb = xtbj(k,i,3,1)
+        uub = xtbj(k,i,1,1)
+        vvb = xtbj(k,i,2,1)
+        wwb = xtbj(k,i,3,1)
       end if
 
 c
 c     compute total (steady and unsteady) surface jet
 c
-      cqt = bc2036_cqt(time, cq0, cqa, t_cyc, t_s99, d_cyc)
+      cqt = cq2036(time, cq0, cqa, t_cyc, t_s99, d_cyc)
 
 c     compute direction cosines for surface jet
 c
       sjet   = sqrt(sjetx*sjetx+sjety*sjety+sjetz*sjetz)
+      snx    = sj(1,k,i,1)
+      sny    = sj(1,k,i,2)
+      snz    = sj(1,k,i,3)
       if (sjet.ne.0.0) then
         sjetx = sjetx/sjet
         sjety = sjety/sjet
         sjetz = sjetz/sjet
       else
-        sjetx = sj(1,k,i,1)
-        sjety = sj(1,k,i,2)
-        sjetz = sj(1,k,i,3)
+        sjetx = snx 
+        sjety = sny 
+        sjetz = snz 
       endif
 
+c     wall normal component
+c     > 0 means inflow
+      cqn = cqt*(sjetx*snx+sjety*sny+sjetz*snz)
+c
+      pb  = q(1,k,i,5)
+      c2  = gamma*q(1,k,i,5)/q(1,k,i,1)
+      if (real(cqn).lt.1e-12) then ! without jet
+        dpb = q(2,k,i,5)-q(1,k,i,5)
+        pb  = pb - dpb/2.0
+        if (real(pb).le.0.0) pb = q(1,k,i,5)
+        if (real(bcdata(kk,ii,ip,1)) .gt. 0.) then
+          c2  = bcdata(kk,ii,ip,1)
+        else if (real(bcdata(kk,ii,ip,1)) .lt. 0.) then
+          c2=1.e0+gm1*0.5e0*xmach*xmach
+        else
+          xm2 = (q(1,k,i,2)-uub)**2+
+     +          (q(1,k,i,3)-vvb)**2+
+     +          (q(1,k,i,4)-wwb)**2
+          xm2 = xm2/c2
+          c2  = c2*(1.+0.5*gm1*xm2)
+        end if
+      endif
 c     add directional components of surface jet
 c
       uub = uub + sjetx*xmach*cqt*c2/(gamma*pb)
@@ -253,187 +282,46 @@ c
       qj0(k,i,3,2) = z1*q(1,k,i,3) + z2*q(j2,k,i,3) + z3*qj0(k,i,3,1)
       qj0(k,i,4,2) = z1*q(1,k,i,4) + z2*q(j2,k,i,4) + z3*qj0(k,i,4,1)
       qj0(k,i,5,2) = z1*q(1,k,i,5) + z2*q(j2,k,i,5) + z3*qj0(k,i,5,1)
-  300 continue
-  400 continue
+c 
+c     Turbulence
+c     only need to do advanced model turbulence B.C.s on finest grid
 c
-      if (ivmx.ge.2) then
-      if (level .ge. lglobal .and. ntime .ne. 0) then
-        if (iwf(2) .eq. 0) then
-        do 191 i=ista,iend1
-        do 191 k=ksta,kend1
-c   Store mu_t at wall face center, rather than ghost cell for solid wall BC
+      if (ivmx.ge.2.and.level.ge.lglobal.and.ntime.ne.0) then
+        if (abs(cqt).lt.1e-12) then
           vj0(k,i,1,1) = 0.
           vj0(k,i,1,2) = 0.
-  191   continue
-        else
-c   ***Wall Function begin
-        do 1191 i=ista,iend1
-        do 1191 k=ksta,kend1
-          j=1
-          c2b=cbar/tinf
-          c2bp=c2b+1.0
-          uu  = sqrt((q(j,k,i,2)-qj0(k,i,2,1))**2 +
-     +               (q(j,k,i,3)-qj0(k,i,3,1))**2 +
-     +               (q(j,k,i,4)-qj0(k,i,4,1))**2 )
-          if(ivmx.eq.2) then
-            dist=snj0(j,k,i)
-          else
-            dist=ccabs(smin(j,k,i))
-          end if
-          tt=gamma*qj0(k,i,5,1)/qj0(k,i,1,1)
-          fnuw=c2bp*tt*sqrt(tt)/(c2b+tt)
-          rc=q(j,k,i,1)*uu*dist/fnuw*reue/xmach
-          if (real(rc) .le. 20.24) then
-            xnplus = sqrt(rc)
-          else if (real(rc) .le. 435.) then
-            xnplus = a0(1)+a0(2)*rc+(a0(3)*rc)*rc+(a0(4)*rc)*rc*rc+
-     1           (a0(5)*rc)*rc*rc*rc+(a0(6)*rc)*rc*rc*rc*rc+
-     2           (a0(7)*rc)*rc*rc*rc*rc*rc
-          else if (real(rc) .le. 4000.) then
-            xnplus = a1(1)+a1(2)*rc+(a1(3)*rc)*rc+(a1(4)*rc)*rc*rc+
-     1           (a1(5)*rc)*rc*rc*rc
-          else if (real(rc) .gt. 4000.) then
-            xnplus = a2(1)+a2(2)*rc+a2(3)*rc*rc
-          end if
-          xnplussav=xnplus
-          if(real(xnplus) .gt. 10.) then
-c      Newton iteration to solve for nplus, assuming it is in log region:
-          do num=1,10
-            f=rc/xnplus - 2.44*(log(xnplus)) - 5.2
-            dfdn=-rc/(xnplus*xnplus) - 2.44/xnplus
-            delta=-f/dfdn
-            xnplus=ccabs(xnplus+delta)
-            if(abs(real(delta)) .lt. 1.e-3) goto 1190
-          enddo
-c         revert back to approx series soln if Newton iteration fails
-          xnplus=xnplussav
- 1190     continue
-          end if
-          dudy = uu/dist
-          xmut = fnuw*(xnplus*xnplus*fnuw/(dist**2)/
-     +           (q(j,k,i,1)*dudy)*xmach/reue-1.)
-          vj0(k,i,1,1) = xmut
-          vj0(k,i,1,2) = 0.
- 1191   continue
-        end if
-c   ***Wall Function end
-      end if
-      end if
-c   only need to do advanced model turbulence B.C.s on finest grid
-      if (level .ge. lglobal .and. ntime .ne. 0) then
-      if (ivmx.eq.4 .or. ivmx.eq.5) then
-        do 101 i=ista,iend1
-        do 101 k=ksta,kend1
-          tj0(k,i,1,1) = -tursav(1,k,i,1)
-          tj0(k,i,2,1) = -tursav(1,k,i,2)
-          tj0(k,i,1,2) = 2.*tj0(k,i,1,1)-tursav(1,k,i,1)
-          tj0(k,i,2,2) = 2.*tj0(k,i,2,1)-tursav(1,k,i,2)
-  101   continue
-      end if
-      if (ivmx.ge.6) then
-        c2b=cbar/tinf
-        c2bp=c2b+1.0
-        re=reue/xmach
-        if (     ivmx.eq.6) then
-          beta1=.075
-        else if (ivmx.eq.7 .or. ivmx.eq.30 .or. ivmx.eq.40) then
-          beta1=.075
-        else if (ivmx.eq.8 .or. ivmx.eq.12 .or. ivmx.eq.14) then
-          beta1=.83
-        end if
-        j=1
-c       (Note:  linearly interpolates eps & omega BC to ghost cell.  Previous
-c       versions of k-omega simply put 60*mu/(rho*beta*smin**2) at ghost cell 
-c       rather than at wall, where it "officially" belongs.  However, this ends
-c       up making very little, if any, difference in the k-omega solution.)
-        if (ivmx.eq. 9 .or. ivmx.eq.10 .or. ivmx.eq.11 .or.
-     .      ivmx.eq.13) then
-        do 902 i=ista,iend1
-        do 902 k=ksta,kend1
-          tt=gamma*qj0(k,i,5,1)/qj0(k,i,1,1)
-          fnu=c2bp*tt*sqrt(tt)/(c2b+tt)
-          dkdy=sqrt(tursav(j,k,i,2))/ccabs(smin(j,k,i))
-          tj0(k,i,1,1) = 2.*(2.*fnu/(q(j,k,i,1)*re**2)*dkdy**2)-
-     +                   tursav(j,k,i,1)
-          tj0(k,i,2,1) = -tursav(j,k,i,2)
-          tj0(k,i,1,2) = 2.*tj0(k,i,1,1)-tursav(1,k,i,1)
-          tj0(k,i,2,2) = 2.*tj0(k,i,2,1)-tursav(1,k,i,2)
- 902    continue
-        else if(ivmx.eq.15) then
-        do i=ista,iend1
-        do k=ksta,kend1
-          tt=gamma*q(j,k,i,5)/q(j,k,i,1)
-          fnu=c2bp*tt*sqrt(tt)/(c2b+tt)
-          dkdy=0.5*(tursav(j,k,i,2)+tursav(j+1,k,i,2))/3.
-          tj0(k,i,1,1) = 2.0*dkdy/(re*smin(j,k,i))**2 - tursav(j,k,i,1)
-          tj0(k,i,2,1) = -tursav(j,k,i,2)
-          tj0(k,i,1,2) = 0.
-          tj0(k,i,2,2) = 0.
-        enddo
-        enddo
-        else if(ivmx.eq.16) then
-        do i=ista,iend1
-        do k=ksta,kend1
-          tj0(k,i,1,1) = -tursav(j,k,i,1)
-          tj0(k,i,2,1) = -tursav(j,k,i,2)
-          tj0(k,i,1,2) = 0.
-          tj0(k,i,2,2) = 0.
-        enddo
-        enddo
-        else
-        do 102 i=ista,iend1
-        do 102 k=ksta,kend1
-          tt=gamma*qj0(k,i,5,1)/qj0(k,i,1,1)
-          fnu=c2bp*tt*sqrt(tt)/(c2b+tt)
-          dist=ccabs(smin(j,k,i))
-          tj0(k,i,1,1) = 2.*(60.*fnu/(re**2*q(j,k,i,1)*beta1*dist**2))-
-     +                   tursav(j,k,i,1)
-          tj0(k,i,2,1) = -tursav(j,k,i,2)
-          tj0(k,i,1,2) = 2.*tj0(k,i,1,1)-tursav(1,k,i,1)
-          tj0(k,i,2,2) = 2.*tj0(k,i,2,1)-tursav(1,k,i,2)
- 102    continue
-        end if
-c       for trans model, intermittency at wall is either zero flux or set by user
-        if (ivmx .eq. 30) then
-        do i=ista,iend1
-        ii = i-ista+1
-        do k=ksta,kend1
-        kk = k-ksta+1
-          if (iuse3 .eq. 0) then
-c           bc2004 or 2014 -> zero flux:
-            tj0(k,i,3,1) = tursav(j,k,i,3)
-          else
-c           tj0(k,i,3,1) = 2.*bcdata(kk,ii,ip,3)-tursav(j,k,i,3)
-c           bc2024 -> d(gamma)/dn=-(bcdata(3))*rho/mu*Uedge:
-            tt=gamma*q(j,k,i,5)/q(j,k,i,1)
+          if (ivmx.eq.5) then 
+            tj0(k,i,1,1) = -tursav(1,k,i,1)
+            tj0(k,i,2,1) = -tursav(1,k,i,2)
+            tj0(k,i,1,2) = 2.*tj0(k,i,1,1)-tursav(1,k,i,1)
+            tj0(k,i,2,2) = 2.*tj0(k,i,2,1)-tursav(1,k,i,2)
+          elseif(ivmx.eq.6.or.ivmx.eq.7) then
+            c2b=cbar/tinf
+            c2bp=c2b+1.0
+            re=reue/xmach
+            beta1=.075
+            j=1
+            tt=gamma*qj0(k,i,5,1)/qj0(k,i,1,1)
             fnu=c2bp*tt*sqrt(tt)/(c2b+tt)
             dist=ccabs(smin(j,k,i))
-            hee=(1.+0.5*gm1*xmach**2)/gm1
-            rhoee=(gamma*q(j,k,i,5))**(1./gamma)
-            uee2=(gm1*rhoee*hee-gamma*q(j,k,i,5))/(0.5*gm1*rhoee)
-            if (real(uee2) .gt. 0.) then
-              uee=sqrt(uee2)
-            else
-              uee=xmach
-            end if
-            tj0(k,i,3,1) = tursav(j,k,i,3) + 2.*dist*q(j,k,i,1)/fnu*
-     +        uee*bcdata(kk,ii,ip,3)*reue/xmach
-          end if
-          tj0(k,i,3,2) = 2.*tj0(k,i,3,1)-tursav(1,k,i,3)
-        enddo
-        enddo
-        else if (ivmx .eq. 40) then
-        do i=ista,iend1
-        ii = i-ista+1
-        do k=ksta,kend1
-        kk = k-ksta+1
-          tj0(k,i,3,1) = tursav(j,k,i,3)
-          tj0(k,i,4,1) = tursav(j,k,i,4)
-        enddo
-        enddo
-        end if
-      end if
-      end if
+            tj0(k,i,1,1) = 
+     =        2.*(60.*fnu/(re**2*q(j,k,i,1)*beta1*dist**2))-
+     +        tursav(j,k,i,1)
+            tj0(k,i,2,1) = -tursav(j,k,i,2)
+            tj0(k,i,1,2) = 2.*tj0(k,i,1,1)-tursav(1,k,i,1)
+            tj0(k,i,2,2) = 2.*tj0(k,i,2,1)-tursav(1,k,i,2)
+          endif
+        else ! use free stream val or user specified via turwj
+          vj0(k,i,1,1) = vist3d(1,k,i)
+          vj0(k,i,1,0) = 0.0
+          do l=1,nummem
+            tj0(k,i,l,1) = ccmax(tur10(l), turwj(l))
+            tj0(k,i,l,2) = tj0(k,i,l,1)
+          enddo
+        endif
+      endif
+  300 continue
+  400 continue
 c
       end if
 c
@@ -456,33 +344,9 @@ c     read data
       t_cyc         = bcdata(kk,ii,ip,7)
       t_s99         = bcdata(kk,ii,ip,8)
       d_cyc         = bcdata(kk,ii,ip,9)
+      
+      call bc2036_check(t_cyc,t_s99,d_cyc,nou,bou,ibufdim,nbuf)
 
-      if ((d_cyc.ge.1.).or.(d_cyc.le.0.)) then
-            nou(1) = min(nou(1)+1,ibufdim)
-            write(bou(nou(1),1),*)' stopping in bc2036...',
-     .            ' invalid d_cyc, must between (0, 1)'
-            call termn8(myid,-1,ibufdim,nbuf,bou,nou)
-      end if
-      pb            = q(jdim1,k,i,5)
-      dpb           = q(jdim1,k,i,5)-q(jdim1-1,k,i,5)
-      pb            = pb + dpb/2.0
-      if (real(pb).le.0.0)  pb = q(jdim1,k,i,5)
-      c2            = gamma*q(jdim1,k,i,5)/q(jdim1,k,i,1)
-      if (real(bcdata(kk,ii,ip,1)) .gt. 0.) then
-        c2  = bcdata(kk,ii,ip,1)
-      else if (real(bcdata(kk,ii,ip,1)) .lt. 0.) then
-        c2=1.e0+gm1*0.5e0*xmach*xmach
-      else
-        if (iuns.gt.0 .and. irelv.gt.0) then
-        xm2 = (q(jdim1,k,i,2)-xtbj(k,i,1,2))**2+
-     +        (q(jdim1,k,i,3)-xtbj(k,i,2,2))**2+
-     +        (q(jdim1,k,i,4)-xtbj(k,i,3,2))**2
-        else
-        xm2 = q(jdim1,k,i,2)**2+q(jdim1,k,i,3)**2+q(jdim1,k,i,4)**2
-        end if
-        xm2 = xm2/c2
-        c2  = c2*(1.+0.5*gm1*xm2)
-      end if
 c
 c     surface velocities
 c
@@ -494,27 +358,52 @@ c     for dynamic mesh, set velocity at wall to grid velocity at wall
 c     if irelv > 0; otherwise, set to zero
 c
       if (iuns.gt.0 .and. irelv.gt.0) then
-      uub = xtbj(k,i,1,2)
-      vvb = xtbj(k,i,2,2)
-      wwb = xtbj(k,i,3,2)
+        uub = xtbj(k,i,1,2)
+        vvb = xtbj(k,i,2,2)
+        wwb = xtbj(k,i,3,2)
       end if
 
 c
 c     compute total (steady and unsteady) surface jet
 c
-      cqt = bc2036_cqt(time, cq0, cqa, t_cyc, t_s99, d_cyc)
+      cqt = cq2036(time, cq0, cqa, t_cyc, t_s99, d_cyc)
 
 c     compute direction cosines for surface jet
 c
-      sjet   = sqrt(sjetx*sjetx+sjety*sjety+sjetz*sjetz)
+      sjet = sqrt(sjetx*sjetx+sjety*sjety+sjetz*sjetz)
+      snx  = -sj(jdim,k,i,1)
+      sny  = -sj(jdim,k,i,2)
+      snz  = -sj(jdim,k,i,3)
       if (sjet.ne.0.0) then
         sjetx = sjetx/sjet
         sjety = sjety/sjet
         sjetz = sjetz/sjet
       else
-        sjetx = -sj(jdim,k,i,1)
-        sjety = -sj(jdim,k,i,2)
-        sjetz = -sj(jdim,k,i,3)
+        sjetx = snx
+        sjety = sny
+        sjetz = snz
+      endif
+c     wall normal component
+c     > 0 means inflow
+      cqn = cqt*(sjetx*snx+sjety*sny+sjetz*snz)
+c
+      pb  = q(jdim1,k,i,5)
+      c2  = gamma*q(jdim1,k,i,5)/q(jdim1,k,i,1)
+      if (real(cqn).lt.1e-12) then ! without jet
+        dpb = q(jdim1,k,i,5)-q(jdim1-1,k,i,5)
+        pb  = pb + dpb/2.0
+        if (real(pb).le.0.0)  pb = q(jdim1,k,i,5)
+        if (real(bcdata(kk,ii,ip,1)) .gt. 0.) then
+          c2  = bcdata(kk,ii,ip,1)
+        else if (real(bcdata(kk,ii,ip,1)) .lt. 0.) then
+          c2=1.e0+gm1*0.5e0*xmach*xmach
+        else
+          xm2 = (q(jdim1,k,i,2)-uub)**2+
+     +          (q(jdim1,k,i,3)-vvb)**2+
+     +          (q(jdim1,k,i,4)-wwb)**2
+          xm2 = xm2/c2
+          c2  = c2*(1.+0.5*gm1*xm2)
+        end if
       endif
 
 c     add directional components of surface jet
@@ -547,187 +436,47 @@ c
       qj0(k,i,3,4) = z1*q(jdim1,k,i,3)+z2*q(j2,k,i,3)+z3*qj0(k,i,3,3)
       qj0(k,i,4,4) = z1*q(jdim1,k,i,4)+z2*q(j2,k,i,4)+z3*qj0(k,i,4,3)
       qj0(k,i,5,4) = z1*q(jdim1,k,i,5)+z2*q(j2,k,i,5)+z3*qj0(k,i,5,3)
-  700 continue
-  800 continue
+c 
+c     Turbulence
+c     only need to do advanced model turbulence B.C.s on finest grid
 c
-      if (ivmx.ge.2) then
-      if (level .ge. lglobal .and. ntime .ne. 0) then
-        if (iwf(2) .eq. 0) then
-        do 291 i=ista,iend1
-        do 291 k=ksta,kend1
-c   Store mu_t at wall face center, rather than ghost cell for solid wall BC
+      if (ivmx.ge.2.and.level.ge.lglobal.and.ntime.ne.0) then 
+        if (abs(cqt).lt.1e-12) then
           vj0(k,i,1,3) = 0.
           vj0(k,i,1,4) = 0.
-  291   continue
-        else
-c   ***Wall Function begin
-        do 1291 i=ista,iend1
-        do 1291 k=ksta,kend1
-          j=jdim-1
-          c2b=cbar/tinf
-          c2bp=c2b+1.0
-          uu  = sqrt((q(j,k,i,2)-qj0(k,i,2,3))**2 +
-     +               (q(j,k,i,3)-qj0(k,i,3,3))**2 +
-     +               (q(j,k,i,4)-qj0(k,i,4,3))**2 )
-          if(ivmx.eq.2) then
-            dist=snjm(j,k,i)
-          else
-            dist=ccabs(smin(j,k,i))
-          end if
-          tt=gamma*qj0(k,i,5,3)/qj0(k,i,1,3)
-          fnuw=c2bp*tt*sqrt(tt)/(c2b+tt)
-          rc=q(j,k,i,1)*uu*dist/fnuw*reue/xmach
-          if (real(rc) .le. 20.24) then
-            xnplus = sqrt(rc)
-          else if (real(rc) .le. 435.) then
-            xnplus = a0(1)+a0(2)*rc+(a0(3)*rc)*rc+(a0(4)*rc)*rc*rc+
-     1           (a0(5)*rc)*rc*rc*rc+(a0(6)*rc)*rc*rc*rc*rc+
-     2           (a0(7)*rc)*rc*rc*rc*rc*rc
-          else if (real(rc) .le. 4000.) then
-            xnplus = a1(1)+a1(2)*rc+(a1(3)*rc)*rc+(a1(4)*rc)*rc*rc+
-     1           (a1(5)*rc)*rc*rc*rc
-          else if (real(rc) .gt. 4000.) then
-            xnplus = a2(1)+a2(2)*rc+a2(3)*rc*rc
-          end if
-          xnplussav=xnplus
-          if(real(xnplus) .gt. 10.) then
-c      Newton iteration to solve for nplus, assuming it is in log region:
-          do num=1,10
-            f=rc/xnplus - 2.44*(log(xnplus)) - 5.2
-            dfdn=-rc/(xnplus*xnplus) - 2.44/xnplus
-            delta=-f/dfdn
-            xnplus=ccabs(xnplus+delta)
-            if(abs(real(delta)) .lt. 1.e-3) goto 1290
-          enddo
-c         revert back to approx series soln if Newton iteration fails
-          xnplus=xnplussav
- 1290     continue
-          end if
-          dudy = uu/dist
-          xmut = fnuw*(xnplus*xnplus*fnuw/(dist**2)/
-     +           (q(j,k,i,1)*dudy)*xmach/reue-1.)
-          vj0(k,i,1,3) = xmut
-          vj0(k,i,1,4) = 0.
- 1291   continue
-        end if
-c   ***Wall Function end
-      end if
-      end if
-c   only need to do advanced model turbulence B.C.s on finest grid
-      if (level .ge. lglobal .and. ntime .ne. 0) then
-      if (ivmx.eq.4 .or. ivmx.eq.5) then
-        do 201 i=ista,iend1
-        do 201 k=ksta,kend1
-          tj0(k,i,1,3) = -tursav(jdim-1,k,i,1)
-          tj0(k,i,2,3) = -tursav(jdim-1,k,i,2)
-          tj0(k,i,1,4) = 2.*tj0(k,i,1,3)-tursav(jdim-1,k,i,1)
-          tj0(k,i,2,4) = 2.*tj0(k,i,2,3)-tursav(jdim-1,k,i,2)
-  201   continue
-      end if
-      if (ivmx.ge.6) then
-        c2b=cbar/tinf
-        c2bp=c2b+1.0
-        re=reue/xmach
-        if (     ivmx.eq.6) then
-          beta1=.075
-        else if (ivmx.eq.7 .or. ivmx.eq.30 .or. ivmx.eq.40) then
-          beta1=.075
-        else if (ivmx.eq.8 .or. ivmx.eq.12 .or. ivmx.eq.14) then
-          beta1=.83
-        end if
-        j=jdim-1
-c       (Note:  linearly interpolates eps & omega BC to ghost cell.  Previous
-c       versions of k-omega simply put 60*mu/(rho*beta*smin**2) at ghost cell 
-c       rather than at wall, where it "officially" belongs.  However, this ends
-c       up making very little, if any, difference in the k-omega solution.)
-        if (ivmx.eq.9 .or. ivmx.eq.10 .or. ivmx.eq.11 .or.
-     .      ivmx.eq.13) then
-        do 812 i=ista,iend1
-        do 812 k=ksta,kend1
-          tt=gamma*qj0(k,i,5,3)/qj0(k,i,1,3)
-          fnu=c2bp*tt*sqrt(tt)/(c2b+tt)
-          dkdy=sqrt(tursav(j,k,i,2))/ccabs(smin(j,k,i))
-          tj0(k,i,1,3) = 2.*(2.*fnu/(q(j,k,i,1)*re**2)*dkdy**2)-
-     +                   tursav(j,k,i,1)
-          tj0(k,i,2,3) = -tursav(j,k,i,2)
-          tj0(k,i,1,4) = 2.*tj0(k,i,1,3)-tursav(jdim-1,k,i,1)
-          tj0(k,i,2,4) = 2.*tj0(k,i,2,3)-tursav(jdim-1,k,i,2)
- 812    continue
-        else if(ivmx.eq.15) then 
-        do i=ista,iend1
-        do k=ksta,kend1
-          tt=gamma*q(j,k,i,5)/q(j,k,i,1)
-          fnu=c2bp*tt*sqrt(tt)/(c2b+tt)
-          dkdy=0.5*(tursav(j,k,i,2)+tursav(j-1,k,i,2))/3.
-          tj0(k,i,1,3) = 2.0*dkdy/(re*smin(j,k,i))**2 - tursav(j,k,i,1)
-          tj0(k,i,2,3) = -tursav(j,k,i,2)
-          tj0(k,i,1,4) = 0.
-          tj0(k,i,2,4) = 0.
-        enddo
-        enddo
-        else if(ivmx.eq.16) then
-        do i=ista,iend1
-        do k=ksta,kend1
-          tj0(k,i,1,3) = -tursav(j,k,i,1)
-          tj0(k,i,2,3) = -tursav(j,k,i,2)
-          tj0(k,i,1,4) = 0.
-          tj0(k,i,2,4) = 0.
-        enddo
-        enddo
-        else
-        do 202 i=ista,iend1
-        do 202 k=ksta,kend1
-          tt=gamma*qj0(k,i,5,3)/qj0(k,i,1,3)
-          fnu=c2bp*tt*sqrt(tt)/(c2b+tt)
-          dist=ccabs(smin(j,k,i))
-          tj0(k,i,1,3) = 2.*(60.*fnu/(re**2*q(j,k,i,1)*beta1*dist**2))-
-     +                   tursav(j,k,i,1)
-          tj0(k,i,2,3) = -tursav(j,k,i,2)
-          tj0(k,i,1,4) = 2.*tj0(k,i,1,3)-tursav(jdim-1,k,i,1)
-          tj0(k,i,2,4) = 2.*tj0(k,i,2,3)-tursav(jdim-1,k,i,2)
- 202    continue
-        end if
-c       for trans model, intermittency at wall is either zero flux or set by user
-        if (ivmx .eq. 30) then
-        do i=ista,iend1
-        ii = i-ista+1
-        do k=ksta,kend1
-        kk = k-ksta+1
-          if (iuse3 .eq. 0) then
-c           bc2004 or 2014 -> zero flux:
-            tj0(k,i,3,3) = tursav(j,k,i,3)
-          else
-c           tj0(k,i,3,3) = 2.*bcdata(kk,ii,ip,3)-tursav(j,k,i,3)
-c           bc2024 -> d(gamma)/dn=-(bcdata(3))*rho/mu*Uedge:
-            tt=gamma*q(j,k,i,5)/q(j,k,i,1)
+          if (ivmx.eq.5) then 
+            tj0(k,i,1,3) = -tursav(jdim-1,k,i,1)
+            tj0(k,i,2,3) = -tursav(jdim-1,k,i,2)
+            tj0(k,i,1,4) = 2.*tj0(k,i,1,3)-tursav(jdim-1,k,i,1)
+            tj0(k,i,2,4) = 2.*tj0(k,i,2,3)-tursav(jdim-1,k,i,2)
+          elseif(ivmx.eq.6.or.ivmx.eq.7) then
+            c2b=cbar/tinf
+            c2bp=c2b+1.0
+            re=reue/xmach
+            beta1=.075
+            j=jdim-1
+            tt=gamma*qj0(k,i,5,3)/qj0(k,i,1,3)
             fnu=c2bp*tt*sqrt(tt)/(c2b+tt)
             dist=ccabs(smin(j,k,i))
-            hee=(1.+0.5*gm1*xmach**2)/gm1
-            rhoee=(gamma*q(j,k,i,5))**(1./gamma)
-            uee2=(gm1*rhoee*hee-gamma*q(j,k,i,5))/(0.5*gm1*rhoee)
-            if (real(uee2) .gt. 0.) then
-              uee=sqrt(uee2)
-            else
-              uee=xmach
-            end if
-            tj0(k,i,3,3) = tursav(j,k,i,3) + 2.*dist*q(j,k,i,1)/fnu*
-     +        uee*bcdata(kk,ii,ip,3)*reue/xmach
-          end if
-          tj0(k,i,3,4) = 2.*tj0(k,i,3,3)-tursav(jdim-1,k,i,3)
-        enddo
-        enddo
-        else if (ivmx .eq. 40) then
-        do i=ista,iend1
-        ii = i-ista+1
-        do k=ksta,kend1
-        kk = k-ksta+1
-          tj0(k,i,3,3) = tursav(j,k,i,3)
-          tj0(k,i,4,3) = tursav(j,k,i,4)
-        enddo
-        enddo
-        end if
-      end if
-      end if
+            tj0(k,i,1,3) = 
+     =        2.*(60.*fnu/(re**2*q(j,k,i,1)*beta1*dist**2))-
+     +        tursav(j,k,i,1)
+            tj0(k,i,2,3) = -tursav(j,k,i,2)
+            tj0(k,i,1,4) = 2.*tj0(k,i,1,3)-tursav(jdim-1,k,i,1)
+            tj0(k,i,2,4) = 2.*tj0(k,i,2,3)-tursav(jdim-1,k,i,2)
+          endif
+        else
+          vj0(k,i,1,3) = vist3d(jdim-1,k,i)
+          vj0(k,i,1,4) = 0.
+          do l=1,nummem
+            tj0(k,i,l,3) = ccmax(tur10(l), turwj(l))
+            tj0(k,i,l,4) = tj0(k,i,l,3)
+          enddo
+        endif
+      endif
+  700 continue
+  800 continue
+
 c
       end if
 c
@@ -750,33 +499,9 @@ c     read data
       t_cyc         = bcdata(jj,ii,ip,7)
       t_s99         = bcdata(jj,ii,ip,8)
       d_cyc         = bcdata(jj,ii,ip,9)
+      
+      call bc2036_check(t_cyc,t_s99,d_cyc,nou,bou,ibufdim,nbuf)
 
-      if ((d_cyc.ge.1.).or.(d_cyc.le.0.)) then
-            nou(1) = min(nou(1)+1,ibufdim)
-            write(bou(nou(1),1),*)' stopping in bc2036...',
-     .            ' invalid d_cyc, must between (0, 1)'
-            call termn8(myid,-1,ibufdim,nbuf,bou,nou)
-      end if
-      pb            = q(j,1,i,5)
-      dpb           = q(j,2,i,5)-q(j,1,i,5)
-      pb            = pb - dpb/2.0
-      if (real(pb).le.0.0)  pb = q(j,1,i,5)
-      c2            = gamma*q(j,1,i,5)/q(j,1,i,1)
-      if (real(bcdata(jj,ii,ip,1)) .gt. 0.) then
-        c2  = bcdata(jj,ii,ip,1)
-      else if (real(bcdata(jj,ii,ip,1)) .lt. 0.) then
-        c2=1.e0+gm1*0.5e0*xmach*xmach
-      else
-        if (iuns.gt.0 .and. irelv.gt.0) then
-        xm2 = (q(j,1,i,2)-xtbk(j,i,1,1))**2+
-     +        (q(j,1,i,3)-xtbk(j,i,2,1))**2+
-     +        (q(j,1,i,4)-xtbk(j,i,3,1))**2
-        else
-        xm2 = q(j,1,i,2)**2+q(j,1,i,3)**2+q(j,1,i,4)**2
-        end if
-        xm2 = xm2/c2
-        c2  = c2*(1.+0.5*gm1*xm2)
-      end if
 c
 c     surface velocities
 c
@@ -796,21 +521,50 @@ c
 c
 c     compute total (steady and unsteady) surface jet
 c
-      cqt = bc2036_cqt(time, cq0, cqa, t_cyc, t_s99, d_cyc)
+      cqt = cq2036(time, cq0, cqa, t_cyc, t_s99, d_cyc)
 
 c     compute direction cosines for surface jet
 c
       sjet   = sqrt(sjetx*sjetx+sjety*sjety+sjetz*sjetz)
+      snx    = sk(j,1,i,1)
+      sny    = sk(j,1,i,2)
+      snz    = sk(j,1,i,3)
       if (sjet.ne.0.0) then
         sjetx = sjetx/sjet
         sjety = sjety/sjet
         sjetz = sjetz/sjet
       else
-        sjetx = sk(j,1,i,1)
-        sjety = sk(j,1,i,2)
-        sjetz = sk(j,1,i,3)
+        sjetx = snx
+        sjety = sny
+        sjetz = snz
       endif
 
+c     wall normal component
+c     > 0 means inflow
+      cqn = cqt*(sjetx*snx+sjety*sny+sjetz*snz)
+
+      pb            = q(j,1,i,5)
+      c2            = gamma*q(j,1,i,5)/q(j,1,i,1)
+      if (real(cqn).lt.1e-12) then ! without jet
+        dpb           = q(j,2,i,5)-q(j,1,i,5)
+        pb            = pb - dpb/2.0
+        if (real(pb).le.0.0)  pb = q(j,1,i,5)
+        if (real(bcdata(jj,ii,ip,1)) .gt. 0.) then
+          c2  = bcdata(jj,ii,ip,1)
+        else if (real(bcdata(jj,ii,ip,1)) .lt. 0.) then
+          c2=1.e0+gm1*0.5e0*xmach*xmach
+        else
+          if (iuns.gt.0 .and. irelv.gt.0) then
+          xm2 = (q(j,1,i,2)-xtbk(j,i,1,1))**2+
+     +          (q(j,1,i,3)-xtbk(j,i,2,1))**2+
+     +          (q(j,1,i,4)-xtbk(j,i,3,1))**2
+          else
+          xm2 = q(j,1,i,2)**2+q(j,1,i,3)**2+q(j,1,i,4)**2
+          end if
+          xm2 = xm2/c2
+          c2  = c2*(1.+0.5*gm1*xm2)
+        end if
+      endif
 c     add directional components of surface jet
 c
       uub = uub + sjetx*xmach*cqt*c2/(gamma*pb)
@@ -841,187 +595,46 @@ c
       qk0(j,i,3,2) = z1*q(j,1,i,3) + z2*q(j,k2,i,3) + z3*qk0(j,i,3,1)
       qk0(j,i,4,2) = z1*q(j,1,i,4) + z2*q(j,k2,i,4) + z3*qk0(j,i,4,1)
       qk0(j,i,5,2) = z1*q(j,1,i,5) + z2*q(j,k2,i,5) + z3*qk0(j,i,5,1)
- 1100 continue
- 1200 continue
+c 
+c     Turbulence
+c     only need to do advanced model turbulence B.C.s on finest grid
 c
-      if (ivmx.ge.2) then
-      if (level .ge. lglobal .and. ntime .ne. 0) then
-        if (iwf(3) .eq. 0) then
-        do 391 i=ista,iend1
-        do 391 j=jsta,jend1
-c   Store mu_t at wall face center, rather than ghost cell for solid wall BC
+      if (livmx.ge.2.and.level.ge.lglobal.and.ntime.ne.0) then 
+        if (abs(cqt).lt.1e-12) then
           vk0(j,i,1,1) = 0.
           vk0(j,i,1,2) = 0.
-  391   continue
-        else
-c   ***Wall Function begin
-        do 1391 i=ista,iend1
-        do 1391 j=jsta,jend1
-          k=1
-          c2b=cbar/tinf
-          c2bp=c2b+1.0
-          uu  = sqrt((q(j,k,i,2)-qk0(j,i,2,1))**2 +
-     +               (q(j,k,i,3)-qk0(j,i,3,1))**2 +
-     +               (q(j,k,i,4)-qk0(j,i,4,1))**2 )
-          if(ivmx.eq.2) then
-            dist=snk0(j,k,i)
-          else
-            dist=ccabs(smin(j,k,i))
-          end if
-          tt=gamma*qk0(j,i,5,1)/qk0(j,i,1,1)
-          fnuw=c2bp*tt*sqrt(tt)/(c2b+tt)
-          rc=q(j,k,i,1)*uu*dist/fnuw*reue/xmach
-          if (real(rc) .le. 20.24) then
-            xnplus = sqrt(rc)
-          else if (real(rc) .le. 435.) then
-            xnplus = a0(1)+a0(2)*rc+(a0(3)*rc)*rc+(a0(4)*rc)*rc*rc+
-     1           (a0(5)*rc)*rc*rc*rc+(a0(6)*rc)*rc*rc*rc*rc+
-     2           (a0(7)*rc)*rc*rc*rc*rc*rc
-          else if (real(rc) .le. 4000.) then
-            xnplus = a1(1)+a1(2)*rc+(a1(3)*rc)*rc+(a1(4)*rc)*rc*rc+
-     1           (a1(5)*rc)*rc*rc*rc
-          else if (real(rc) .gt. 4000.) then
-            xnplus = a2(1)+a2(2)*rc+a2(3)*rc*rc
-          end if
-          xnplussav=xnplus
-          if(real(xnplus) .gt. 10.) then
-c      Newton iteration to solve for nplus, assuming it is in log region:
-          do num=1,10
-            f=rc/xnplus - 2.44*(log(xnplus)) - 5.2
-            dfdn=-rc/(xnplus*xnplus) - 2.44/xnplus
-            delta=-f/dfdn
-            xnplus=ccabs(xnplus+delta)
-            if(abs(real(delta)) .lt. 1.e-3) goto 1390
-          enddo
-c         revert back to approx series soln if Newton iteration fails
-          xnplus=xnplussav
- 1390     continue
-          end if
-          dudy = uu/dist
-          xmut = fnuw*(xnplus*xnplus*fnuw/(dist**2)/
-     +           (q(j,k,i,1)*dudy)*xmach/reue-1.)
-          vk0(j,i,1,1) = xmut
-          vk0(j,i,1,2) = 0.
- 1391   continue
-        end if
-c   ***Wall Function end
-      end if
-      end if
-c   only need to do advanced model turbulence B.C.s on finest grid
-      if (level .ge. lglobal .and. ntime .ne. 0) then
-      if (ivmx.eq.4 .or. ivmx.eq.5) then
-        do 301 i=ista,iend1
-        do 301 j=jsta,jend1
-          tk0(j,i,1,1) = -tursav(j,1,i,1)
-          tk0(j,i,2,1) = -tursav(j,1,i,2)
-          tk0(j,i,1,2) = 2.*tk0(j,i,1,1)-tursav(j,1,i,1)
-          tk0(j,i,2,2) = 2.*tk0(j,i,2,1)-tursav(j,1,i,2)
-  301   continue
-      end if
-      if (ivmx.ge.6) then
-        c2b=cbar/tinf
-        c2bp=c2b+1.0
-        re=reue/xmach
-        if (     ivmx.eq.6) then
-          beta1=.075
-        else if (ivmx.eq.7 .or. ivmx.eq.30 .or. ivmx.eq.40) then
-          beta1=.075
-        else if (ivmx.eq.8 .or. ivmx.eq.12 .or. ivmx.eq.14) then
-          beta1=.83
-        end if
-        k=1
-c       (Note:  linearly interpolates eps & omega BC to ghost cell.  Previous
-c       versions of k-omega simply put 60*mu/(rho*beta*smin**2) at ghost cell 
-c       rather than at wall, where it "officially" belongs.  However, this ends
-c       up making very little, if any, difference in the k-omega solution.)
-        if (ivmx.eq.9 .or. ivmx.eq.10 .or. ivmx.eq.11 .or.
-     .      ivmx.eq.13) then
-        do 732 i=ista,iend1
-        do 732 j=jsta,jend1
-          tt=gamma*qk0(j,i,5,1)/qk0(j,i,1,1)
-          fnu=c2bp*tt*sqrt(tt)/(c2b+tt)
-          dkdy=sqrt(tursav(j,k,i,2))/ccabs(smin(j,k,i))
-          tk0(j,i,1,1) = 2.*(2.*fnu/(q(j,k,i,1)*re**2)*dkdy**2)-
-     +                   tursav(j,k,i,1)
-          tk0(j,i,2,1) = -tursav(j,k,i,2)
-          tk0(j,i,1,2) = 2.*tk0(j,i,1,1)-tursav(j,1,i,1)
-          tk0(j,i,2,2) = 2.*tk0(j,i,2,1)-tursav(j,1,i,2)
- 732    continue
-        else if(ivmx.eq.15) then
-        do i=ista,iend1
-        do j=jsta,jend1
-          tt=gamma*q(j,k,i,5)/q(j,k,i,1)
-          fnu=c2bp*tt*sqrt(tt)/(c2b+tt)
-          dkdy=0.5*(tursav(j,k,i,2)+tursav(j,k+1,i,2))/3.
-          tk0(j,i,1,1) = 2.0*dkdy/(re*smin(j,k,i))**2 - tursav(j,k,i,1)
-          tk0(j,i,2,1) = -tursav(j,k,i,2)
-          tk0(j,i,1,2) = 0.
-          tk0(j,i,2,2) = 0.
-        enddo
-        enddo
-        else if(ivmx.eq.16) then
-        do i=ista,iend1
-        do j=jsta,jend1
-          tk0(j,i,1,1) = -tursav(j,k,i,1)
-          tk0(j,i,2,1) = -tursav(j,k,i,2)
-          tk0(j,i,1,2) = 0.
-          tk0(j,i,2,2) = 0.
-        enddo
-        enddo
-        else
-        do 302 i=ista,iend1
-        do 302 j=jsta,jend1
-          tt=gamma*qk0(j,i,5,1)/qk0(j,i,1,1)
-          fnu=c2bp*tt*sqrt(tt)/(c2b+tt)
-          dist=ccabs(smin(j,k,i))
-          tk0(j,i,1,1) = 2.*(60.*fnu/(re**2*q(j,k,i,1)*beta1*dist**2))-
-     +                   tursav(j,k,i,1)
-          tk0(j,i,2,1) = -tursav(j,k,i,2)
-          tk0(j,i,1,2) = 2.*tk0(j,i,1,1)-tursav(j,1,i,1)
-          tk0(j,i,2,2) = 2.*tk0(j,i,2,1)-tursav(j,1,i,2)
- 302    continue
-        end if
-c       for trans model, intermittency at wall is either zero flux or set by user
-        if (ivmx .eq. 30) then
-        do i=ista,iend1
-        ii = i-ista+1
-        do j=jsta,jend1
-        jj = j-jsta+1
-          if (iuse3 .eq. 0) then
-c           bc2004 or 2014 -> zero flux:
-            tk0(j,i,3,1) = tursav(j,k,i,3)
-          else
-c           tk0(j,i,3,1) = 2.*bcdata(jj,ii,ip,3)-tursav(j,k,i,3)
-c           bc2024 -> d(gamma)/dn=-(bcdata(3))*rho/mu*Uedge:
-            tt=gamma*q(j,k,i,5)/q(j,k,i,1)
+          if (ivmx.eq.5) then 
+            tk0(j,i,1,1) = -tursav(j,1,i,1)
+            tk0(j,i,2,1) = -tursav(j,1,i,2)
+            tk0(j,i,1,2) = 2.*tk0(j,i,1,1)-tursav(j,1,i,1)
+            tk0(j,i,2,2) = 2.*tk0(j,i,2,1)-tursav(j,1,i,2)
+          elseif(ivmx.eq.6.or.ivmx.eq.7) then
+            c2b=cbar/tinf
+            c2bp=c2b+1.0
+            re=reue/xmach
+            beta1=.075
+            k=1
+            tt=gamma*qk0(j,i,5,1)/qk0(j,i,1,1)
             fnu=c2bp*tt*sqrt(tt)/(c2b+tt)
             dist=ccabs(smin(j,k,i))
-            hee=(1.+0.5*gm1*xmach**2)/gm1
-            rhoee=(gamma*q(j,k,i,5))**(1./gamma)
-            uee2=(gm1*rhoee*hee-gamma*q(j,k,i,5))/(0.5*gm1*rhoee)
-            if (real(uee2) .gt. 0.) then
-              uee=sqrt(uee2)
-            else
-              uee=xmach
-            end if
-            tk0(j,i,3,1) = tursav(j,k,i,3) + 2.*dist*q(j,k,i,1)/fnu*
-     +        uee*bcdata(jj,ii,ip,3)*reue/xmach
-          end if
-          tk0(j,i,3,2) = 2.*tk0(j,i,3,1)-tursav(j,1,i,3)
-        enddo
-        enddo
-        else if (ivmx .eq. 40) then
-        do i=ista,iend1
-        ii = i-ista+1
-        do j=jsta,jend1
-        jj = j-jsta+1
-          tk0(j,i,3,1) = tursav(j,k,i,3)
-          tk0(j,i,4,1) = tursav(j,k,i,4)
-        enddo
-        enddo
-        end if
-      end if
-      end if
+            tk0(j,i,1,1) = 
+     =        2.*(60.*fnu/(re**2*q(j,k,i,1)*beta1*dist**2))-
+     +        tursav(j,k,i,1)
+            tk0(j,i,2,1) = -tursav(j,k,i,2)
+            tk0(j,i,1,2) = 2.*tk0(j,i,1,1)-tursav(j,1,i,1)
+            tk0(j,i,2,2) = 2.*tk0(j,i,2,1)-tursav(j,1,i,2)
+          endif
+        else
+          vk0(j,i,1,1) = vist3d(j,1,i)
+          vk0(j,i,1,2) = 0.
+          do l=1,nummem
+            tk0(k,i,l,1) = ccmax(tur10(l), turwj(l))
+            tk0(k,i,l,2) = tk0(k,i,l,1)
+          enddo
+        endif
+      endif
+ 1100 continue
+ 1200 continue
 c
       end if
 c
@@ -1044,33 +657,9 @@ c     read data
       t_cyc         = bcdata(jj,ii,ip,7)
       t_s99         = bcdata(jj,ii,ip,8)
       d_cyc         = bcdata(jj,ii,ip,9)
+      
+      call bc2036_check(t_cyc,t_s99,d_cyc,nou,bou,ibufdim,nbuf)
 
-      if ((d_cyc.ge.1.).or.(d_cyc.le.0.)) then
-            nou(1) = min(nou(1)+1,ibufdim)
-            write(bou(nou(1),1),*)' stopping in bc2036...',
-     .            ' invalid d_cyc, must between (0, 1)'
-            call termn8(myid,-1,ibufdim,nbuf,bou,nou)
-      end if
-      pb            = q(j,kdim1,i,5)
-      dpb           = q(j,kdim1,i,5)-q(j,kdim1-1,i,5)
-      pb            = pb + dpb/2.0
-      if (real(pb).le.0.0)  pb = q(j,kdim1,i,5)
-      c2            = gamma*q(j,kdim1,i,5)/q(j,kdim1,i,1)
-      if (real(bcdata(jj,ii,ip,1)) .gt. 0.) then
-        c2  = bcdata(jj,ii,ip,1)
-      else if (real(bcdata(jj,ii,ip,1)) .lt. 0.) then
-        c2=1.e0+gm1*0.5e0*xmach*xmach
-      else
-        if (iuns.gt.0 .and. irelv.gt.0) then
-        xm2 = (q(j,kdim1,i,2)-xtbk(j,i,1,2))**2+
-     +        (q(j,kdim1,i,3)-xtbk(j,i,2,2))**2+
-     +        (q(j,kdim1,i,4)-xtbk(j,i,3,2))**2
-        else
-        xm2 = q(j,kdim1,i,2)**2+q(j,kdim1,i,3)**2+q(j,kdim1,i,4)**2
-        end if
-        xm2 = xm2/c2
-        c2  = c2*(1.+0.5*gm1*xm2)
-      end if
 c
 c     surface velocities
 c
@@ -1090,21 +679,50 @@ c
 c
 c     compute total (steady and unsteady) surface jet
 c
-      cqt = bc2036_cqt(time, cq0, cqa, t_cyc, t_s99, d_cyc)
+      cqt = cq2036(time, cq0, cqa, t_cyc, t_s99, d_cyc)
 
 c     compute direction cosines for surface jet
 c
       sjet   = sqrt(sjetx*sjetx+sjety*sjety+sjetz*sjetz)
+      snx    = -sk(j,kdim,i,1)
+      sny    = -sk(j,kdim,i,2)
+      snz    = -sk(j,kdim,i,3)
       if (sjet.ne.0.0) then
         sjetx = sjetx/sjet
         sjety = sjety/sjet
         sjetz = sjetz/sjet
       else
-        sjetx = -sk(j,kdim,i,1)
-        sjety = -sk(j,kdim,i,2)
-        sjetz = -sk(j,kdim,i,3)
+        sjetx = snx
+        sjety = sny
+        sjetz = snz
       endif
-
+      
+c     wall normal component
+c     > 0 means inflow
+      cqn = cqt*(sjetx*snx+sjety*sny+sjetz*snz)
+      pb = q(j,kdim1,i,5)
+      c2 = gamma*q(j,kdim1,i,5)/q(j,kdim1,i,1)
+      
+      if (real(cqn).lt.1e-12) then ! without jet
+        dpb           = q(j,kdim1,i,5)-q(j,kdim1-1,i,5)
+        pb            = pb + dpb/2.0
+        if (real(pb).le.0.0)  pb = q(j,kdim1,i,5)
+        if (real(bcdata(jj,ii,ip,1)) .gt. 0.) then
+          c2  = bcdata(jj,ii,ip,1)
+        else if (real(bcdata(jj,ii,ip,1)) .lt. 0.) then
+          c2=1.e0+gm1*0.5e0*xmach*xmach
+        else
+          if (iuns.gt.0 .and. irelv.gt.0) then
+          xm2 = (q(j,kdim1,i,2)-xtbk(j,i,1,2))**2+
+     +          (q(j,kdim1,i,3)-xtbk(j,i,2,2))**2+
+     +          (q(j,kdim1,i,4)-xtbk(j,i,3,2))**2
+          else
+          xm2 = q(j,kdim1,i,2)**2+q(j,kdim1,i,3)**2+q(j,kdim1,i,4)**2
+          end if
+          xm2 = xm2/c2
+          c2  = c2*(1.+0.5*gm1*xm2)
+        end if
+      endif
 c     add directional components of surface jet
 c
       uub = uub + sjetx*xmach*cqt*c2/(gamma*pb)
@@ -1135,187 +753,46 @@ c
       qk0(j,i,3,4) = z1*q(j,kdim1,i,3)+z2*q(j,k2,i,3)+z3*qk0(j,i,3,3)
       qk0(j,i,4,4) = z1*q(j,kdim1,i,4)+z2*q(j,k2,i,4)+z3*qk0(j,i,4,3)
       qk0(j,i,5,4) = z1*q(j,kdim1,i,5)+z2*q(j,k2,i,5)+z3*qk0(j,i,5,3)
- 1500 continue
- 1600 continue
+c 
+c     Turbulence
+c     only need to do advanced model turbulence B.C.s on finest grid
 c
-      if (ivmx.ge.2) then
-      if (level .ge. lglobal .and. ntime .ne. 0) then
-        if (iwf(3) .eq. 0) then
-        do 491 i=ista,iend1
-        do 491 j=jsta,jend1
-c   Store mu_t at wall face center, rather than ghost cell for solid wall BC
+      if (ivmx.ge.2.and.level.ge.lglobal.and.ntime.ne.0) then 
+        if (abs(cqt).lt.1e-12) then
           vk0(j,i,1,3) = 0.
           vk0(j,i,1,4) = 0.
-  491   continue
-        else
-c   ***Wall Function begin
-        do 1491 i=ista,iend1
-        do 1491 j=jsta,jend1
-          k=kdim-1
-          c2b=cbar/tinf
-          c2bp=c2b+1.0
-          uu  = sqrt((q(j,k,i,2)-qk0(j,i,2,3))**2 +
-     +               (q(j,k,i,3)-qk0(j,i,3,3))**2 +
-     +               (q(j,k,i,4)-qk0(j,i,4,3))**2 )
-          if(ivmx.eq.2) then
-            dist=snkm(j,k,i)
-          else
-            dist=ccabs(smin(j,k,i))
-          end if
-          tt=gamma*qk0(j,i,5,3)/qk0(j,i,1,3)
-          fnuw=c2bp*tt*sqrt(tt)/(c2b+tt)
-          rc=q(j,k,i,1)*uu*dist/fnuw*reue/xmach
-          if (real(rc) .le. 20.24) then
-            xnplus = sqrt(rc)
-          else if (real(rc) .le. 435.) then
-            xnplus = a0(1)+a0(2)*rc+(a0(3)*rc)*rc+(a0(4)*rc)*rc*rc+
-     1           (a0(5)*rc)*rc*rc*rc+(a0(6)*rc)*rc*rc*rc*rc+
-     2           (a0(7)*rc)*rc*rc*rc*rc*rc
-          else if (real(rc) .le. 4000.) then
-            xnplus = a1(1)+a1(2)*rc+(a1(3)*rc)*rc+(a1(4)*rc)*rc*rc+
-     1           (a1(5)*rc)*rc*rc*rc
-          else if (real(rc) .gt. 4000.) then
-            xnplus = a2(1)+a2(2)*rc+a2(3)*rc*rc
-          end if
-          xnplussav=xnplus
-          if(real(xnplus) .gt. 10.) then
-c      Newton iteration to solve for nplus, assuming it is in log region:
-          do num=1,10
-            f=rc/xnplus - 2.44*(log(xnplus)) - 5.2
-            dfdn=-rc/(xnplus*xnplus) - 2.44/xnplus
-            delta=-f/dfdn
-            xnplus=ccabs(xnplus+delta)
-            if(abs(real(delta)) .lt. 1.e-3) goto 1490
-          enddo
-c         revert back to approx series soln if Newton iteration fails
-          xnplus=xnplussav
- 1490     continue
-          end if
-          dudy = uu/dist
-          xmut = fnuw*(xnplus*xnplus*fnuw/(dist**2)/
-     +           (q(j,k,i,1)*dudy)*xmach/reue-1.)
-          vk0(j,i,1,3) = xmut
-          vk0(j,i,1,4) = 0.
- 1491   continue
-        end if
-c   ***Wall Function end
-      end if
-      end if
-c   only need to do advanced model turbulence B.C.s on finest grid
-      if (level .ge. lglobal .and. ntime .ne. 0) then
-      if (ivmx.eq.4 .or. ivmx.eq.5) then
-        do 401 i=ista,iend1
-        do 401 j=jsta,jend1
-          tk0(j,i,1,3) = -tursav(j,kdim-1,i,1)
-          tk0(j,i,2,3) = -tursav(j,kdim-1,i,2)
-          tk0(j,i,1,4) = 2.*tk0(j,i,1,3)-tursav(j,kdim-1,i,1)
-          tk0(j,i,2,4) = 2.*tk0(j,i,2,3)-tursav(j,kdim-1,i,2)
-  401   continue
-      end if
-      if (ivmx.ge.6) then
-        c2b=cbar/tinf
-        c2bp=c2b+1.0
-        re=reue/xmach
-        if (     ivmx.eq.6) then
-          beta1=.075
-        else if (ivmx.eq.7 .or. ivmx.eq.30 .or. ivmx.eq.40) then
-          beta1=.075
-        else if (ivmx.eq.8 .or. ivmx.eq.12 .or. ivmx.eq.14) then
-          beta1=.83
-        end if
-        k=kdim-1
-c       (Note:  linearly interpolates eps & omega BC to ghost cell.  Previous
-c       versions of k-omega simply put 60*mu/(rho*beta*smin**2) at ghost cell 
-c       rather than at wall, where it "officially" belongs.  However, this ends
-c       up making very little, if any, difference in the k-omega solution.)
-        if (ivmx.eq.9 .or. ivmx.eq.10 .or. ivmx.eq.11 .or.
-     .      ivmx.eq.13) then
-        do 492 i=ista,iend1
-        do 492 j=jsta,jend1
-          tt=gamma*qk0(j,i,5,3)/qk0(j,i,1,3)
-          fnu=c2bp*tt*sqrt(tt)/(c2b+tt)
-          dkdy=sqrt(tursav(j,k,i,2))/ccabs(smin(j,k,i))
-          tk0(j,i,1,3) = 2.*(2.*fnu/(q(j,k,i,1)*re**2)*dkdy**2)-
-     +                   tursav(j,k,i,1)
-          tk0(j,i,2,3) = -tursav(j,k,i,2)
-          tk0(j,i,1,4) = 2.*tk0(j,i,1,3)-tursav(j,kdim-1,i,1)
-          tk0(j,i,2,4) = 2.*tk0(j,i,2,3)-tursav(j,kdim-1,i,2)
- 492    continue
-        else if(ivmx.eq.15) then
-        do i=ista,iend1
-        do j=jsta,jend1
-          tt=gamma*q(j,k,i,5)/q(j,k,i,1)
-          fnu=c2bp*tt*sqrt(tt)/(c2b+tt)
-          dkdy=0.5*(tursav(j,k,i,2)+tursav(j,k-1,i,2))/3.
-          tk0(j,i,1,3) = 2.0*dkdy/(re*smin(j,k,i))**2 - tursav(j,k,i,1)
-          tk0(j,i,2,3) = -tursav(j,k,i,2)
-          tk0(j,i,1,4) = 0.
-          tk0(j,i,2,4) = 0.
-        enddo
-        enddo
-        else if(ivmx.eq.16) then
-        do i=ista,iend1
-        do j=jsta,jend1
-          tk0(j,i,1,3) = -tursav(j,k,i,1)
-          tk0(j,i,2,3) = -tursav(j,k,i,2)
-          tk0(j,i,1,4) = 0.
-          tk0(j,i,2,4) = 0.
-        enddo
-        enddo
-        else
-        do 402 i=ista,iend1
-        do 402 j=jsta,jend1
-          tt=gamma*qk0(j,i,5,3)/qk0(j,i,1,3)
-          fnu=c2bp*tt*sqrt(tt)/(c2b+tt)
-          dist=ccabs(smin(j,k,i))
-          tk0(j,i,1,3) = 2.*(60.*fnu/(re**2*q(j,k,i,1)*beta1*dist**2))-
-     +                   tursav(j,k,i,1)
-          tk0(j,i,2,3) = -tursav(j,k,i,2)
-          tk0(j,i,1,4) = 2.*tk0(j,i,1,3)-tursav(j,kdim-1,i,1)
-          tk0(j,i,2,4) = 2.*tk0(j,i,2,3)-tursav(j,kdim-1,i,2)
- 402    continue
-        end if
-c       for trans model, intermittency at wall is either zero flux or set by user
-        if (ivmx .eq. 30) then
-        do i=ista,iend1
-        ii = i-ista+1
-        do j=jsta,jend1
-        jj = j-jsta+1
-          if (iuse3 .eq. 0) then
-c           bc2004 or 2014 -> zero flux:
-            tk0(j,i,3,3) = tursav(j,k,i,3)
-          else
-c           tk0(j,i,3,3) = 2.*bcdata(jj,ii,ip,3)-tursav(j,k,i,3)
-c           bc2024 -> d(gamma)/dn=-(bcdata(3))*rho/mu*Uedge:
-            tt=gamma*q(j,k,i,5)/q(j,k,i,1)
+          if (ivmx.eq.5) then 
+            tk0(j,i,1,3) = -tursav(j,kdim-1,i,1)
+            tk0(j,i,2,3) = -tursav(j,kdim-1,i,2)
+            tk0(j,i,1,4) = 2.*tk0(j,i,1,3)-tursav(j,kdim-1,i,1)
+            tk0(j,i,2,4) = 2.*tk0(j,i,2,3)-tursav(j,kdim-1,i,2)
+          elseif(ivmx.eq.6.or.ivmx.eq.7) then 
+            c2b=cbar/tinf
+            c2bp=c2b+1.0
+            re=reue/xmach
+            beta1=.075
+            k=kdim-1
+            tt=gamma*qk0(j,i,5,3)/qk0(j,i,1,3)
             fnu=c2bp*tt*sqrt(tt)/(c2b+tt)
             dist=ccabs(smin(j,k,i))
-            hee=(1.+0.5*gm1*xmach**2)/gm1
-            rhoee=(gamma*q(j,k,i,5))**(1./gamma)
-            uee2=(gm1*rhoee*hee-gamma*q(j,k,i,5))/(0.5*gm1*rhoee)
-            if (real(uee2) .gt. 0.) then
-              uee=sqrt(uee2)
-            else
-              uee=xmach
-            end if
-            tk0(j,i,3,3) = tursav(j,k,i,3) + 2.*dist*q(j,k,i,1)/fnu*
-     +        uee*bcdata(jj,ii,ip,3)*reue/xmach
-          end if
-          tk0(j,i,3,4) = 2.*tk0(j,i,3,3)-tursav(j,kdim-1,i,3)
-        enddo
-        enddo
-        else if (ivmx .eq. 40) then
-        do i=ista,iend1
-        ii = i-ista+1
-        do j=jsta,jend1
-        jj = j-jsta+1
-          tk0(j,i,3,3) = tursav(j,k,i,3)
-          tk0(j,i,4,3) = tursav(j,k,i,4)
-        enddo
-        enddo
-        end if
-      end if
-      end if
+            tk0(j,i,1,3) = 
+     =        2.*(60.*fnu/(re**2*q(j,k,i,1)*beta1*dist**2))-
+     +        tursav(j,k,i,1)
+            tk0(j,i,2,3) = -tursav(j,k,i,2)
+            tk0(j,i,1,4) = 2.*tk0(j,i,1,3)-tursav(j,kdim-1,i,1)
+            tk0(j,i,2,4) = 2.*tk0(j,i,2,3)-tursav(j,kdim-1,i,2)
+          endif
+        else
+          vk0(j,i,1,3) = vist3d(j,kdim-1,i)
+          vk0(j,i,1,4) = 0.0
+          do l=1,nummem
+            tk0(j,i,l,3) = ccmax(tur10(l), turwj(l))
+            tk0(j,i,l,4) = tk0(j,i,l,3)
+          enddo
+        endif
+      endif
+ 1500 continue
+ 1600 continue
 c
       end if
 c
@@ -1338,33 +815,9 @@ c     read data
       t_cyc         = bcdata(jj,kk,ip,7)
       t_s99         = bcdata(jj,kk,ip,8)
       d_cyc         = bcdata(jj,kk,ip,9)
+      
+      call bc2036_check(t_cyc,t_s99,d_cyc,nou,bou,ibufdim,nbuf)
 
-      if ((d_cyc.ge.1.).or.(d_cyc.le.0.)) then
-            nou(1) = min(nou(1)+1,ibufdim)
-            write(bou(nou(1),1),*)' stopping in bc2036...',
-     .            ' invalid d_cyc, must between (0, 1)'
-            call termn8(myid,-1,ibufdim,nbuf,bou,nou)
-      end if
-      pb            = q(j,k,1,5)
-      dpb           = q(j,k,2,5)-q(j,k,1,5)
-      pb            = pb - dpb/2.0
-      if (real(pb).le.0.0)  pb = q(j,k,1,5)
-      c2            = gamma*q(j,k,1,5)/q(j,k,1,1)
-      if (real(bcdata(jj,kk,ip,1)) .gt. 0.) then
-        c2  = bcdata(jj,kk,ip,1)
-      else if (real(bcdata(jj,kk,ip,1)) .lt. 0.) then
-        c2=1.e0+gm1*0.5e0*xmach*xmach
-      else
-        if (iuns.gt.0 .and. irelv.gt.0) then
-        xm2 = (q(j,k,1,2)-xtbi(j,k,1,1))**2+
-     +        (q(j,k,1,3)-xtbi(j,k,2,1))**2+
-     +        (q(j,k,1,4)-xtbi(j,k,3,1))**2
-        else
-        xm2 = q(j,k,1,2)**2+q(j,k,1,3)**2+q(j,k,1,4)**2
-        end if
-        xm2 = xm2/c2
-        c2  = c2*(1.+0.5*gm1*xm2)
-      end if
 c
 c     surface velocities
 c
@@ -1384,20 +837,49 @@ c
 c
 c     compute total (steady and unsteady) surface jet
 c
-      cqt = bc2036_cqt(time, cq0, cqa, t_cyc, t_s99, d_cyc)
+      cqt = cq2036(time, cq0, cqa, t_cyc, t_s99, d_cyc)
 
 c     compute direction cosines for surface jet
 c
       sjet   = sqrt(sjetx*sjetx+sjety*sjety+sjetz*sjetz)
+      snx    = si(j,k,1,1)
+      sny    = si(j,k,1,2)
+      snz    = si(j,k,1,3)
       if (sjet.ne.0.0) then
         sjetx = sjetx/sjet
         sjety = sjety/sjet
         sjetz = sjetz/sjet
       else
-        sjetx = si(j,k,1,1)
-        sjety = si(j,k,1,2)
-        sjetz = si(j,k,1,3)
+        sjetx = snx
+        sjety = sny
+        sjetz = snz
       endif
+c     wall normal component
+c     > 0 means inflow
+      cqn = cqt*(sjetx*snx+sjety*sny+sjetz*snz)
+      pb            = q(j,k,1,5)
+      c2            = gamma*q(j,k,1,5)/q(j,k,1,1)
+      
+      if (real(cqn).lt.1e-12) then ! without jet
+        dpb           = q(j,k,2,5)-q(j,k,1,5)
+        pb            = pb - dpb/2.0
+        if (real(pb).le.0.0)  pb = q(j,k,1,5)
+        if (real(bcdata(jj,kk,ip,1)) .gt. 0.) then
+          c2  = bcdata(jj,kk,ip,1)
+        else if (real(bcdata(jj,kk,ip,1)) .lt. 0.) then
+          c2=1.e0+gm1*0.5e0*xmach*xmach
+        else
+          if (iuns.gt.0 .and. irelv.gt.0) then
+          xm2 = (q(j,k,1,2)-xtbi(j,k,1,1))**2+
+     +          (q(j,k,1,3)-xtbi(j,k,2,1))**2+
+     +          (q(j,k,1,4)-xtbi(j,k,3,1))**2
+          else
+          xm2 = q(j,k,1,2)**2+q(j,k,1,3)**2+q(j,k,1,4)**2
+          end if
+          xm2 = xm2/c2
+          c2  = c2*(1.+0.5*gm1*xm2)
+        end if
+      end if
 
 c     add directional components of surface jet
 c
@@ -1429,187 +911,46 @@ c
       qi0(j,k,3,2) = z1*q(j,k,1,3) + z2*q(j,k,i2,3) + z3*qi0(j,k,3,1)
       qi0(j,k,4,2) = z1*q(j,k,1,4) + z2*q(j,k,i2,4) + z3*qi0(j,k,4,1)
       qi0(j,k,5,2) = z1*q(j,k,1,5) + z2*q(j,k,i2,5) + z3*qi0(j,k,5,1)
- 1900 continue
- 2000 continue
+c 
+c     Turbulence
+c     only need to do advanced model turbulence B.C.s on finest grid
 c
-      if (ivmx.ge.2) then
-      if (level .ge. lglobal .and. ntime .ne. 0) then
-        if (iwf(1) .eq. 0) then
-        do 591 k=ksta,kend1
-        do 591 j=jsta,jend1
-c   Store mu_t at wall face center, rather than ghost cell for solid wall BC
+      if (ivmx.ge.2.and.level.ge.lglobal.and.ntime.ne.0) then 
+        if (abs(cqt).lt.1e-12) then
           vi0(j,k,1,1) = 0.
           vi0(j,k,1,2) = 0.
-  591   continue
-        else
-c   ***Wall Function begin
-        do 1591 k=ksta,kend1
-        do 1591 j=jsta,jend1
-          i=1
-          c2b=cbar/tinf
-          c2bp=c2b+1.0
-          uu  = sqrt((q(j,k,i,2)-qi0(j,k,2,1))**2 +
-     +               (q(j,k,i,3)-qi0(j,k,3,1))**2 +
-     +               (q(j,k,i,4)-qi0(j,k,4,1))**2 )
-          if(ivmx.eq.2) then
-            dist=sni0(j,k,i)
-          else
-            dist=ccabs(smin(j,k,i))
-          end if
-          tt=gamma*qi0(j,k,5,1)/qi0(j,k,1,1)
-          fnuw=c2bp*tt*sqrt(tt)/(c2b+tt)
-          rc=q(j,k,i,1)*uu*dist/fnuw*reue/xmach
-          if (real(rc) .le. 20.24) then
-            xnplus = sqrt(rc)
-          else if (real(rc) .le. 435.) then
-            xnplus = a0(1)+a0(2)*rc+(a0(3)*rc)*rc+(a0(4)*rc)*rc*rc+
-     1           (a0(5)*rc)*rc*rc*rc+(a0(6)*rc)*rc*rc*rc*rc+
-     2           (a0(7)*rc)*rc*rc*rc*rc*rc
-          else if (real(rc) .le. 4000.) then
-            xnplus = a1(1)+a1(2)*rc+(a1(3)*rc)*rc+(a1(4)*rc)*rc*rc+
-     1           (a1(5)*rc)*rc*rc*rc
-          else if (real(rc) .gt. 4000.) then
-            xnplus = a2(1)+a2(2)*rc+a2(3)*rc*rc
-          end if
-          xnplussav=xnplus
-          if(real(xnplus) .gt. 10.) then
-c      Newton iteration to solve for nplus, assuming it is in log region:
-          do num=1,10
-            f=rc/xnplus - 2.44*(log(xnplus)) - 5.2
-            dfdn=-rc/(xnplus*xnplus) - 2.44/xnplus
-            delta=-f/dfdn
-            xnplus=ccabs(xnplus+delta)
-            if(abs(real(delta)) .lt. 1.e-3) goto 1590
-          enddo
-c         revert back to approx series soln if Newton iteration fails
-          xnplus=xnplussav
- 1590     continue
-          end if
-          dudy = uu/dist
-          xmut = fnuw*(xnplus*xnplus*fnuw/(dist**2)/
-     +           (q(j,k,i,1)*dudy)*xmach/reue-1.)
-          vi0(j,k,1,1) = xmut
-          vi0(j,k,1,2) = 0.
- 1591   continue
-        end if
-c   ***Wall Function end
-      end if
-      end if
-c   only need to do advanced model turbulence B.C.s on finest grid
-      if (level .ge. lglobal .and. ntime .ne. 0) then
-      if (ivmx.eq.4 .or. ivmx.eq.5) then
-        do 501 k=ksta,kend1
-        do 501 j=jsta,jend1
-          ti0(j,k,1,1) = -tursav(j,k,1,1)
-          ti0(j,k,2,1) = -tursav(j,k,1,2)
-          ti0(j,k,1,2) = 2.*ti0(j,k,1,1)-tursav(j,k,1,1)
-          ti0(j,k,2,2) = 2.*ti0(j,k,2,1)-tursav(j,k,1,2)
-  501   continue
-      end if
-      if (ivmx.ge.6) then
-        c2b=cbar/tinf
-        c2bp=c2b+1.0
-        re=reue/xmach
-        if (     ivmx.eq.6) then
-          beta1=.075
-        else if (ivmx.eq.7 .or. ivmx.eq.30 .or. ivmx.eq.40) then
-          beta1=.075
-        else if (ivmx.eq.8 .or. ivmx.eq.12 .or. ivmx.eq.14) then
-          beta1=.83
-        end if
-        i=1
-c       (Note:  linearly interpolates eps & omega BC to ghost cell.  Previous
-c       versions of k-omega simply put 60*mu/(rho*beta*smin**2) at ghost cell 
-c       rather than at wall, where it "officially" belongs.  However, this ends
-c       up making very little, if any, difference in the k-omega solution.)
-        if (ivmx.eq.9 .or. ivmx.eq.10 .or. ivmx.eq.11 .or.
-     .      ivmx.eq.13) then
-        do 652 k=ksta,kend1
-        do 652 j=jsta,jend1
-          tt=gamma*qi0(j,k,5,1)/qi0(j,k,1,1)
-          fnu=c2bp*tt*sqrt(tt)/(c2b+tt)
-          dkdy=sqrt(tursav(j,k,i,2))/ccabs(smin(j,k,i))
-          ti0(j,k,1,1) = 2.*(2.*fnu/(q(j,k,i,1)*re**2)*dkdy**2)-
-     +                   tursav(j,k,i,1)
-          ti0(j,k,2,1) = -tursav(j,k,i,2)
-          ti0(j,k,1,2) = 2.*ti0(j,k,1,1)-tursav(j,k,1,1)
-          ti0(j,k,2,2) = 2.*ti0(j,k,2,1)-tursav(j,k,1,2)
- 652    continue
-        else if(ivmx.eq.15) then
-        do k=ksta,kend1
-        do j=jsta,jend1
-          tt=gamma*q(j,k,i,5)/q(j,k,i,1)
-          fnu=c2bp*tt*sqrt(tt)/(c2b+tt)
-          dkdy=0.5*(tursav(j,k,i,2)+tursav(j,k,i+1,2))/3.
-          ti0(j,k,1,1) = 2.0*dkdy/(re*smin(j,k,i))**2 - tursav(j,k,i,1)
-          ti0(j,k,2,1) = -tursav(j,k,i,2)
-          ti0(j,k,1,2) = 0.
-          ti0(j,k,2,2) = 0.
-        enddo
-        enddo
-        else if(ivmx.eq.16) then
-        do k=ksta,kend1
-        do j=jsta,jend1
-          ti0(j,k,1,1) = -tursav(j,k,i,1)
-          ti0(j,k,2,1) = -tursav(j,k,i,2)
-          ti0(j,k,1,2) = 0.
-          ti0(j,k,2,2) = 0.
-        enddo
-        enddo
-        else
-        do 502 k=ksta,kend1
-        do 502 j=jsta,jend1
-          tt=gamma*qi0(j,k,5,1)/qi0(j,k,1,1)
-          fnu=c2bp*tt*sqrt(tt)/(c2b+tt)
-          dist=ccabs(smin(j,k,i))
-          ti0(j,k,1,1) = 2.*(60.*fnu/(re**2*q(j,k,i,1)*beta1*dist**2))-
-     +                   tursav(j,k,i,1)
-          ti0(j,k,2,1) = -tursav(j,k,i,2)
-          ti0(j,k,1,2) = 2.*ti0(j,k,1,1)-tursav(j,k,1,1)
-          ti0(j,k,2,2) = 2.*ti0(j,k,2,1)-tursav(j,k,1,2)
- 502    continue
-        end if
-c       for trans model, intermittency at wall is either zero flux or set by user
-        if (ivmx .eq. 30) then
-        do k=ksta,kend1
-        kk = k-ksta+1
-        do j=jsta,jend1
-        jj = j-jsta+1
-          if (iuse3 .eq. 0) then
-c           bc2004 or 2014 -> zero flux:
-            ti0(j,k,3,1) = tursav(j,k,i,3)
-          else
-c           ti0(j,k,3,1) = 2.*bcdata(jj,kk,ip,3)-tursav(j,k,i,3)
-c           bc2024 -> d(gamma)/dn=-(bcdata(3))*rho/mu*Uedge:
-            tt=gamma*q(j,k,i,5)/q(j,k,i,1)
+          if (ivmx.eq.5) then 
+            ti0(j,k,1,1) = -tursav(j,k,1,1)
+            ti0(j,k,2,1) = -tursav(j,k,1,2)
+            ti0(j,k,1,2) = 2.*ti0(j,k,1,1)-tursav(j,k,1,1)
+            ti0(j,k,2,2) = 2.*ti0(j,k,2,1)-tursav(j,k,1,2)
+          elseif(ivmx.eq.6.or.ivmx.eq.7) then 
+            c2b=cbar/tinf
+            c2bp=c2b+1.0
+            re=reue/xmach
+            beta1=.075
+            i=1
+            tt=gamma*qi0(j,k,5,1)/qi0(j,k,1,1)
             fnu=c2bp*tt*sqrt(tt)/(c2b+tt)
             dist=ccabs(smin(j,k,i))
-            hee=(1.+0.5*gm1*xmach**2)/gm1
-            rhoee=(gamma*q(j,k,i,5))**(1./gamma)
-            uee2=(gm1*rhoee*hee-gamma*q(j,k,i,5))/(0.5*gm1*rhoee)
-            if (real(uee2) .gt. 0.) then
-              uee=sqrt(uee2)
-            else
-              uee=xmach
-            end if
-            ti0(j,k,3,1) = tursav(j,k,i,3) + 2.*dist*q(j,k,i,1)/fnu*
-     +        uee*bcdata(jj,kk,ip,3)*reue/xmach
-          end if
-          ti0(j,k,3,2) = 2.*ti0(j,k,3,1)-tursav(j,k,1,3)
-        enddo
-        enddo
-        else if (ivmx .eq. 40) then
-        do k=ksta,kend1
-        kk = k-ksta+1
-        do j=jsta,jend1
-        jj = j-jsta+1
-          ti0(j,k,3,1) = tursav(j,k,i,3)
-          ti0(j,k,4,1) = tursav(j,k,i,4)
-        enddo
-        enddo
-        end if
-      end if
-      end if
+            ti0(j,k,1,1) = 
+     =        2.*(60.*fnu/(re**2*q(j,k,i,1)*beta1*dist**2))-
+     +        tursav(j,k,i,1)
+            ti0(j,k,2,1) = -tursav(j,k,i,2)
+            ti0(j,k,1,2) = 2.*ti0(j,k,1,1)-tursav(j,k,1,1)
+            ti0(j,k,2,2) = 2.*ti0(j,k,2,1)-tursav(j,k,1,2)
+          endif
+        else
+          vi0(j,k,1,1) = vist3d(j,k,1)
+          vi0(j,k,1,2) = 0.
+          do l=1,nummem
+            ti0(j,k,l,1) = ccmax(tur10(l), turwj(l))
+            ti0(j,k,l,2) = ti0(j,k,l,1)
+          enddo
+        endif
+      endif
+ 1900 continue
+ 2000 continue
 c
       end if
 c
@@ -1632,33 +973,9 @@ c     read data
       t_cyc         = bcdata(jj,kk,ip,7)
       t_s99         = bcdata(jj,kk,ip,8)
       d_cyc         = bcdata(jj,kk,ip,9)
+      
+      call bc2036_check(t_cyc,t_s99,d_cyc,nou,bou,ibufdim,nbuf)
 
-      if ((d_cyc.ge.1.).or.(d_cyc.le.0.)) then
-            nou(1) = min(nou(1)+1,ibufdim)
-            write(bou(nou(1),1),*)' stopping in bc2036...',
-     .            ' invalid d_cyc, must between (0, 1)'
-            call termn8(myid,-1,ibufdim,nbuf,bou,nou)
-      end if
-      pb            = q(j,k,idim1,5)
-      dpb           = q(j,k,idim1,5)-q(j,k,idim1-1,5)
-      pb            = pb + dpb/2.0
-      if (real(pb).le.0.0)  pb = q(j,k,idim1,5)
-      c2            = gamma*q(j,k,idim1,5)/q(j,k,idim1,1)
-      if (real(bcdata(jj,kk,ip,1)) .gt. 0.) then
-        c2  = bcdata(jj,kk,ip,1)
-      else if (real(bcdata(jj,kk,ip,1)) .lt. 0.) then
-        c2=1.e0+gm1*0.5e0*xmach*xmach
-      else
-        if (iuns.gt.0 .and. irelv.gt.0) then
-        xm2 = (q(j,k,idim1,2)-xtbi(j,k,1,2))**2+
-     +        (q(j,k,idim1,3)-xtbi(j,k,2,2))**2+
-     +        (q(j,k,idim1,4)-xtbi(j,k,3,2))**2
-        else
-        xm2 = q(j,k,idim1,2)**2+q(j,k,idim1,3)**2+q(j,k,idim1,4)**2
-        end if
-        xm2 = xm2/c2
-        c2  = c2*(1.+0.5*gm1*xm2)
-      end if
 c
 c     surface velocities
 c
@@ -1670,29 +987,54 @@ c     for dynamic mesh, set velocity at wall to grid velocity at wall
 c     if irelv > 0; otherwise, set to zero
 c
       if (iuns.gt.0 .and. irelv.gt.0) then
-      uub = xtbi(j,k,1,2)
-      vvb = xtbi(j,k,2,2)
-      wwb = xtbi(j,k,3,2)
+        uub = xtbi(j,k,1,2)
+        vvb = xtbi(j,k,2,2)
+        wwb = xtbi(j,k,3,2)
       end if
 
 c
 c     compute total (steady and unsteady) surface jet
 c
-      cqt = bc2036_cqt(time, cq0, cqa, t_cyc, t_s99, d_cyc)
+      cqt = cq2036(time, cq0, cqa, t_cyc, t_s99, d_cyc)
 
 c     compute direction cosines for surface jet
 c
-      sjet   = sqrt(sjetx*sjetx+sjety*sjety+sjetz*sjetz)
+      sjet = sqrt(sjetx*sjetx+sjety*sjety+sjetz*sjetz)
+      snx  = -si(j,k,idim,1)
+      sny  = -si(j,k,idim,2)
+      snz  = -si(j,k,idim,3)
       if (sjet.ne.0.0) then
         sjetx = sjetx/sjet
         sjety = sjety/sjet
         sjetz = sjetz/sjet
       else
-        sjetx = -si(j,k,idim,1)
-        sjety = -si(j,k,idim,2)
-        sjetz = -si(j,k,idim,3)
+        sjetx = snx
+        sjety = sny
+        sjetz = snz
       endif
-
+      cqn = cqt*(sjetx*snx+sjety*sny+sjetz*snz)
+      pb  = q(j,k,idim1,5)
+      c2  = gamma*q(j,k,idim1,5)/q(j,k,idim1,1)
+      if (real(cqn).lt.1e-12) then ! without jet
+        dpb           = q(j,k,idim1,5)-q(j,k,idim1-1,5)
+        pb            = pb + dpb/2.0
+        if (real(pb).le.0.0)  pb = q(j,k,idim1,5)
+        if (real(bcdata(jj,kk,ip,1)) .gt. 0.) then
+          c2  = bcdata(jj,kk,ip,1)
+        else if (real(bcdata(jj,kk,ip,1)) .lt. 0.) then
+          c2=1.e0+gm1*0.5e0*xmach*xmach
+        else
+          if (iuns.gt.0 .and. irelv.gt.0) then
+          xm2 = (q(j,k,idim1,2)-xtbi(j,k,1,2))**2+
+     +          (q(j,k,idim1,3)-xtbi(j,k,2,2))**2+
+     +          (q(j,k,idim1,4)-xtbi(j,k,3,2))**2
+          else
+          xm2 = q(j,k,idim1,2)**2+q(j,k,idim1,3)**2+q(j,k,idim1,4)**2
+          end if
+          xm2 = xm2/c2
+          c2  = c2*(1.+0.5*gm1*xm2)
+        end if
+      end if
 c     add directional components of surface jet
 c
       uub = uub + sjetx*xmach*cqt*c2/(gamma*pb)
@@ -1723,274 +1065,184 @@ c
       qi0(j,k,3,4) = z1*q(j,k,idim1,3)+z2*q(j,k,i2,3)+z3*qi0(j,k,3,3)
       qi0(j,k,4,4) = z1*q(j,k,idim1,4)+z2*q(j,k,i2,4)+z3*qi0(j,k,4,3)
       qi0(j,k,5,4) = z1*q(j,k,idim1,5)+z2*q(j,k,i2,5)+z3*qi0(j,k,5,3)
+c 
+c     Turbulence
+c     only need to do advanced model turbulence B.C.s on finest grid
+c
+      if (ivmx.ge.2.and.level.ge.lglobal.and.ntime.ne.0) then 
+        if (abs(cqt).lt.1e-12) then
+          vi0(j,k,1,3) = 0.
+          vi0(j,k,1,4) = 0.
+          if (ivmx.eq.5) then 
+            ti0(j,k,1,3) = -tursav(j,k,idim-1,1)
+            ti0(j,k,2,3) = -tursav(j,k,idim-1,2)
+            ti0(j,k,1,4) = 2.*ti0(j,k,1,3)-tursav(j,k,idim-1,1)
+            ti0(j,k,2,4) = 2.*ti0(j,k,2,3)-tursav(j,k,idim-1,2)
+          elseif(ivmx.eq.6.or.ivmx.eq.7) then
+            c2b=cbar/tinf
+            c2bp=c2b+1.0
+            re=reue/xmach
+            beta1=.075
+            i=idim-1
+            tt=gamma*qi0(j,k,5,3)/qi0(j,k,1,3)
+            fnu=c2bp*tt*sqrt(tt)/(c2b+tt)
+            dist=ccabs(smin(j,k,i))
+            ti0(j,k,1,3) = 
+     =        2.*(60.*fnu/(re**2*q(j,k,i,1)*beta1*dist**2))-
+     +        tursav(j,k,i,1)
+            ti0(j,k,2,3) = -tursav(j,k,i,2)
+            ti0(j,k,1,4) = 2.*ti0(j,k,1,3)-tursav(j,k,idim-1,1)
+            ti0(j,k,2,4) = 2.*ti0(j,k,2,3)-tursav(j,k,idim-1,2)
+          endif
+        else
+          vi0(j,k,1,3) = vist3d(j,k,idim-1)
+          vi0(j,k,1,4) = 0.
+          do l=1,nummem
+            ti0(j,k,l,3) = ccmax(tur10(l), turwj(l))
+            ti0(j,k,l,4) = ti0(j,k,l,3)
+          enddo
+        endif
+      endif
  2300 continue
  2400 continue
 c
-      if (ivmx.ge.2) then
-      if (level .ge. lglobal .and. ntime .ne. 0) then
-        if (iwf(1) .eq. 0) then
-        do 691 k=ksta,kend1
-        do 691 j=jsta,jend1
-c   Store mu_t at wall face center, rather than ghost cell for solid wall BC
-          vi0(j,k,1,3) = 0.
-          vi0(j,k,1,4) = 0.
-  691   continue
-        else
-c   ***Wall Function begin
-        do 1691 k=ksta,kend1
-        do 1691 j=jsta,jend1
-          i=idim-1
-          c2b=cbar/tinf
-          c2bp=c2b+1.0
-          uu  = sqrt((q(j,k,i,2)-qi0(j,k,2,3))**2 +
-     +               (q(j,k,i,3)-qi0(j,k,3,3))**2 +
-     +               (q(j,k,i,4)-qi0(j,k,4,3))**2 )
-          if(ivmx.eq.2) then
-            dist=snim(j,k,i)
-          else
-            dist=ccabs(smin(j,k,i))
-          end if
-          tt=gamma*qi0(j,k,5,3)/qi0(j,k,1,3)
-          fnuw=c2bp*tt*sqrt(tt)/(c2b+tt)
-          rc=q(j,k,i,1)*uu*dist/fnuw*reue/xmach
-          if (real(rc) .le. 20.24) then
-            xnplus = sqrt(rc)
-          else if (real(rc) .le. 435.) then
-            xnplus = a0(1)+a0(2)*rc+(a0(3)*rc)*rc+(a0(4)*rc)*rc*rc+
-     1           (a0(5)*rc)*rc*rc*rc+(a0(6)*rc)*rc*rc*rc*rc+
-     2           (a0(7)*rc)*rc*rc*rc*rc*rc
-          else if (real(rc) .le. 4000.) then
-            xnplus = a1(1)+a1(2)*rc+(a1(3)*rc)*rc+(a1(4)*rc)*rc*rc+
-     1           (a1(5)*rc)*rc*rc*rc
-          else if (real(rc) .gt. 4000.) then
-            xnplus = a2(1)+a2(2)*rc+a2(3)*rc*rc
-          end if
-          xnplussav=xnplus
-          if(real(xnplus) .gt. 10.) then
-c      Newton iteration to solve for nplus, assuming it is in log region:
-          do num=1,10
-            f=rc/xnplus - 2.44*(log(xnplus)) - 5.2
-            dfdn=-rc/(xnplus*xnplus) - 2.44/xnplus
-            delta=-f/dfdn
-            xnplus=ccabs(xnplus+delta)
-            if(abs(real(delta)) .lt. 1.e-3) goto 1690
-          enddo
-c         revert back to approx series soln if Newton iteration fails
-          xnplus=xnplussav
- 1690     continue
-          end if
-          dudy = uu/dist
-          xmut = fnuw*(xnplus*xnplus*fnuw/(dist**2)/
-     +           (q(j,k,i,1)*dudy)*xmach/reue-1.)
-          vi0(j,k,1,3) = xmut
-          vi0(j,k,1,4) = 0.
- 1691   continue
-        end if
-c   ***Wall Function end
-      end if
-      end if
-c   only need to do advanced model turbulence B.C.s on finest grid
-      if (level .ge. lglobal .and. ntime .ne. 0) then
-      if (ivmx.eq.4 .or. ivmx.eq.5) then
-        do 601 k=ksta,kend1
-        do 601 j=jsta,jend1
-          ti0(j,k,1,3) = -tursav(j,k,idim-1,1)
-          ti0(j,k,2,3) = -tursav(j,k,idim-1,2)
-          ti0(j,k,1,4) = 2.*ti0(j,k,1,3)-tursav(j,k,idim-1,1)
-          ti0(j,k,2,4) = 2.*ti0(j,k,2,3)-tursav(j,k,idim-1,2)
-  601   continue
-      end if
-      if (ivmx.ge.6) then
-        c2b=cbar/tinf
-        c2bp=c2b+1.0
-        re=reue/xmach
-        if (     ivmx.eq.6) then
-          beta1=.075
-        else if (ivmx.eq.7 .or. ivmx.eq.30 .or. ivmx.eq.40) then
-          beta1=.075
-        else if (ivmx.eq.8 .or. ivmx.eq.12 .or. ivmx.eq.14) then
-          beta1=.83
-        end if
-        i=idim-1
-c       (Note:  linearly interpolates eps & omega BC to ghost cell.  Previous
-c       versions of k-omega simply put 60*mu/(rho*beta*smin**2) at ghost cell 
-c       rather than at wall, where it "officially" belongs.  However, this ends
-c       up making very little, if any, difference in the k-omega solution.)
-        if (ivmx.eq.9 .or. ivmx.eq.10 .or. ivmx.eq.11 .or.
-     .      ivmx.eq.13) then
-        do 632 k=ksta,kend1
-        do 632 j=jsta,jend1
-          tt=gamma*qi0(j,k,5,3)/qi0(j,k,1,3)
-          fnu=c2bp*tt*sqrt(tt)/(c2b+tt)
-          dkdy=sqrt(tursav(j,k,i,2))/ccabs(smin(j,k,i))
-          ti0(j,k,1,3) = 2.*(2.*fnu/(q(j,k,i,1)*re**2)*dkdy**2)-
-     +                   tursav(j,k,i,1)
-          ti0(j,k,2,3) = -tursav(j,k,i,2)
-          ti0(j,k,1,4) = 2.*ti0(j,k,1,3)-tursav(j,k,idim-1,1)
-          ti0(j,k,2,4) = 2.*ti0(j,k,2,3)-tursav(j,k,idim-1,2)
- 632    continue
-        else if(ivmx.eq.15) then
-        do k=ksta,kend1
-        do j=jsta,jend1
-          tt=gamma*q(j,k,i,5)/q(j,k,i,1)
-          fnu=c2bp*tt*sqrt(tt)/(c2b+tt)
-          dkdy=0.5*(tursav(j,k,i,2)+tursav(j,k,i-1,2))/3.
-          ti0(j,k,1,3) = 2.0*dkdy/(re*smin(j,k,i))**2 - tursav(j,k,i,1)
-          ti0(j,k,2,3) = -tursav(j,k,i,2)
-          ti0(j,k,1,4) = 0.
-          ti0(j,k,2,4) = 0.
-        enddo
-        enddo
-        else if(ivmx.eq.16) then
-        do k=ksta,kend1
-        do j=jsta,jend1
-          ti0(j,k,1,3) = -tursav(j,k,i,1)
-          ti0(j,k,2,3) = -tursav(j,k,i,2)
-          ti0(j,k,1,4) = 0.
-          ti0(j,k,2,4) = 0.
-        enddo
-        enddo
-        else
-        do 602 k=ksta,kend1
-        do 602 j=jsta,jend1
-          tt=gamma*qi0(j,k,5,3)/qi0(j,k,1,3)
-          fnu=c2bp*tt*sqrt(tt)/(c2b+tt)
-          dist=ccabs(smin(j,k,i))
-          ti0(j,k,1,3) = 2.*(60.*fnu/(re**2*q(j,k,i,1)*beta1*dist**2))-
-     +                   tursav(j,k,i,1)
-          ti0(j,k,2,3) = -tursav(j,k,i,2)
-          ti0(j,k,1,4) = 2.*ti0(j,k,1,3)-tursav(j,k,idim-1,1)
-          ti0(j,k,2,4) = 2.*ti0(j,k,2,3)-tursav(j,k,idim-1,2)
- 602    continue
-        end if
-c       for trans model, intermittency at wall is either zero flux or set by user
-        if (ivmx .eq. 30) then
-        do k=ksta,kend1
-        kk = k-ksta+1
-        do j=jsta,jend1
-        jj = j-jsta+1
-          if (iuse3 .eq. 0) then
-c           bc2004 or 2014 -> zero flux:
-            ti0(j,k,3,3) = tursav(j,k,i,3)
-          else
-c           ti0(j,k,3,3) = 2.*bcdata(jj,kk,ip,3)-tursav(j,k,i,3)
-c           bc2024 -> d(gamma)/dn=-(bcdata(3))*rho/mu*Uedge:
-            tt=gamma*q(j,k,i,5)/q(j,k,i,1)
-            fnu=c2bp*tt*sqrt(tt)/(c2b+tt)
-            dist=ccabs(smin(j,k,i))
-            hee=(1.+0.5*gm1*xmach**2)/gm1
-            rhoee=(gamma*q(j,k,i,5))**(1./gamma)
-            uee2=(gm1*rhoee*hee-gamma*q(j,k,i,5))/(0.5*gm1*rhoee)
-            if (real(uee2) .gt. 0.) then
-              uee=sqrt(uee2)
-            else
-              uee=xmach
-            end if
-            ti0(j,k,3,3) = tursav(j,k,i,3) + 2.*dist*q(j,k,i,1)/fnu*
-     +        uee*bcdata(jj,kk,ip,3)*reue/xmach
-          end if
-          ti0(j,k,3,4) = 2.*ti0(j,k,3,3)-tursav(j,k,idim-1,3)
-        enddo
-        enddo
-        else if (ivmx .eq. 40) then
-        do k=ksta,kend1
-        kk = k-ksta+1
-        do j=jsta,jend1
-        jj = j-jsta+1
-          ti0(j,k,3,3) = tursav(j,k,i,3)
-          ti0(j,k,4,3) = tursav(j,k,i,4)
-        enddo
-        enddo
-        end if
-      end if
-      end if
       end if
 c
       return
       end
 
+c     d_cyc > 0 pulsed jet
+c     d_cyc = 0 steady jet
+c     d_cyc < 0 one-minus-cosine
+c  a) pulsed jet (d_cyc>0):
+c       d_cyc = duty cycle of the pulse between (0, 1)
+c       t_cyc = period of unsteady jet
+c       t_s99 = time of the pulsed jet achieving its maximum value
+c         t_s99 = 0 => step function
+c         t_s99 > 0 => tanh function
+c         t_s99 < 0 => linear function
+c  b) one-shot jet (d_cyc = 0):
+c       t_cyc = jet start time
+c       t_s99 = time of the pulsed jet achieving its maximum value
+c         t_s99 = 0 => step function
+c         t_s99 > 0 => tanh function
+c         t_s99 < 0 => linear function
+c  c) one-minus-cosine jet (d_cyc < 0):
+c       d_cyc = -1 => continuous
+c       d_cyc = -2 => single wave
+c       t_s99 = time of the jet achieving its maximum value (half period)
+c       t_cyc = jet start time
+      function cq2036(time, cq0, cqu, t_cyc, t_s99, d_cyc) result(cqt)
 #ifdef CMPLX
-      complex function bc2036_cqt(time, cq0, cqa, t_cyc, t_s99, d_cyc)
       implicit complex(a-h,o-z)
-#else
-      function bc2036_cqt(time, cq0, cqa, t_cyc, t_s99, d_cyc)
 #endif
+        parameter pi   =3.141592653589793
+        parameter twopi=6.283185307179586
+        cqt = cq0
+        if (d_cyc.eq.0) then  ! one shot
+          t = time-t_cyc
+          if (t.lt.0) then 
+            cqt = cq0
+          elseif(t.ge.0.and.t.lt.abs(t_s99)) then 
+            c = t/abs(t_s99)
+            if (t_s99.gt.0) c = 0.5+0.5*tanh((c-0.5)*twopi)
+            cqt = cq0 + c*cqu
+          else 
+            cqt = cq0 + cqu
+          endif
+        elseif(d_cyc.lt.0) then  ! one-minus-cosine
+          t = time-t_cyc
+          if (t.le.0) then 
+            cqt = cq0
+          elseif (int(d_cyc).eq.-1.or.t.le.2*t_s99) then
+            cqt = cq0 + 0.5*cqu*(1.0-cos(pi*t/t_s99))
+          else
+            cqt = cq0
+          endif
+        else ! pulsed jet
+          t = mod(time, t_cyc)
+          t00 = 0.5*((1.0-d_cyc)*t_cyc-abs(t_s99)) 
+          t01 = t00 + abs(t_s99)
+          t11 = t_cyc - t00
+          t10 = t11 - abs(t_s99)
+          if (t.le.t00) then 
+            cqt=cq0
+          elseif (t.ge.t00.and.t.lt.t01) then 
+            dt = t-t00
+            c = dt/abs(t_s99)
+            if (t_s99.gt.0) c = 0.5+0.5*tanh((c-0.5)*twopi)
+            cqt = cq0 + c*cqu
+          elseif (t.ge.t01.and.t.lt.t10) then 
+            cqt = cq0+cqu
+          elseif (t.ge.t10.and.t.lt.t11) then 
+            dt = t11-t
+            c = dt/abs(t_s99)
+            if (t_s99.gt.0) c = 0.5+0.5*tanh((c-0.5)*twopi)
+            cqt = cq0 + c*cqu
+          else
+            cqt = cq0
+          endif
+        endif
+      end function cq2036
 
-      twopi = 2.0*acos(-1.0)
-      if (t_cyc .gt. 0) then 
-            t = mod(time, t_cyc)
-      else
-            t = time
-      endif
-      if (t_s99 .eq. 0) then 
-            if (t_cyc .eq. 0) then
-                  t_up   = d_cyc
-                  if (t .gt. t_up) then
-                        cqt    = cq0 + cqa
-                  else
-                        cqt    = cq0
-                  endif
-            else
-                  if (t_cyc .gt. 0) then
-                        t_up   = (1.0-d_cyc)*t_cyc/2.0
-                        t_down = (1.0+d_cyc)*t_cyc/2.0
-                  else
-                        t_up   = ccabs(t_cyc)
-                        t_down = t_up + d_cyc
-                  endif
-                  if ((t.gt.t_up).and.(t.lt.t_down)) then
-                        cqt    = cq0 + cqa
-                  else
-                        cqt    = cq0
-                  endif
-            endif
-      else if (t_s99 .gt. 0) then
-            if (t_cyc .eq. 0) then
-                  t_up   = d_cyc
-                  term1  = 1.0 + cctanh(twopi/t_s99*(time-t_up  ))
-                  cqt    = cq0 + 0.5 * cqa * term1 
-            else
-                  if (t_cyc .gt. 0) then
-                        t_up   = (1.0-d_cyc)*t_cyc/2.0
-                        t_down = (1.0+d_cyc)*t_cyc/2.0
-                  else
-                        t_up   = ccabs(t_cyc)
-                        t_down = t_up + d_cyc
-                  endif
-                  term1  = 1.0 + cctanh(twopi/t_s99*(t-t_up  ))
-                  term2  = 1.0 - cctanh(twopi/t_s99*(t-t_down))
-                  cqt    = cq0 + 0.25 * cqa * term1 * term2
-            endif
-      else !t_s99 .lt. 0
-            t_s50 = ccabs(t_s99)/2
-            if (t_cyc .eq. 0) then
-                  t_up   = d_cyc
-                  if (t.lt.t_up-t_s50) then
-                        cqt    = cq0
-                  else if ( t .lt. t_up+t_s50) then
-                        cqt    = cq0+0.5*cqa*(1+(t-t_up)/t_s50)
-                  else
-                        cqt    = cq0 + cqa
-                  endif
-            else
-                  if (t_cyc.gt.0) then
-                        t_up   = (1.0-d_cyc)*t_cyc/2.0
-                        t_down = (1.0+d_cyc)*t_cyc/2.0
-                  else
-                        t_up   = ccabs(t_cyc)
-                        t_down = t_up + d_cyc
-                  endif
-                  if ((t.lt.t_up-t_s50).or.(t.gt.t_down+t_s50)) then 
-                        cqt = cq0
-                  else if (t.lt.t_up+t_s50) then 
-                        cqt = cq0+0.5*cqa*(1+(t-t_up)/t_s50)
-                  else if (t.gt.t_down-t_s50) then
-                        cqt = cq0+0.5*cqa*(1-(t-t_down)/t_s50)
-                  else
-                        cqt = cq0 + cqa
-                  endif
-            endif
-      endif
-      bc2036_cqt = cqt
-      return
-      end
+      subroutine bc2036_check(t_cyc,t_s99,d_cyc,nou,bou,ibufdim,nbuf)
+#ifdef CMPLX
+      implicit complex(a-h,o-z)
+#endif
+        character*120 bou(ibufdim,nbuf)
+        dimension nou(nbuf)
+        if (d_cyc .lt. 0) then ! one-minus-cosine
+          if (t_s99.lt.1e-20) then 
+            nou(1) = min(nou(1)+1,ibufdim)
+            write(bou(nou(1),1),*)' stopping in bc2036...',
+     .        ' one-minus-cosine jet, invalid half period t_s99=',
+     .        t_s99
+            call termn8(myid,-1,ibufdim,nbuf,bou,nou)
+          endif
+          if (t_cyc.lt.0) then 
+            nou(1) = min(nou(1)+1,ibufdim)
+            write(bou(nou(1),1),*)' stopping in bc2036...',
+     .        ' one-minus-cosine jet, invalid start time t_cyc=',
+     .        t_cyc
+            call termn8(myid,-1,ibufdim,nbuf,bou,nou)
+          endif
+          idc = int(d_cyc)
+          if (idc.ne.-1 .and. idc.ne.-2) then
+            nou(1) = min(nou(1)+1,ibufdim)
+            write(bou(nou(1),1),*)' stopping in bc2036...',
+     .        ' one-minus-cosine jet, invalid d_cyc=', d_cyc
+            call termn8(myid,-1,ibufdim,nbuf,bou,nou)
+          endif
+        elseif (d_cyc.eq.0) then ! one-shot
+          if (t_cyc.lt.0) then 
+            nou(1) = min(nou(1)+1,ibufdim)
+            write(bou(nou(1),1),*)' stopping in bc2036...',
+     .        ' one-shot jet, invalid start time t_cyc=',
+     .        t_cyc
+            call termn8(myid,-1,ibufdim,nbuf,bou,nou)
+          endif
+        else ! pulsed
+          if (t_cyc.lt.0) then 
+            nou(1) = min(nou(1)+1,ibufdim)
+            write(bou(nou(1),1),*)' stopping in bc2036...',
+     .        ' pulsed jet, invalid period t_cyc=',
+     .        t_cyc
+            call termn8(myid,-1,ibufdim,nbuf,bou,nou)
+          endif
+          ! check duty cycle
+          if (d_cyc.ge.1.0) then 
+            write(bou(nou(1),1),*)' stopping in bc2036...',
+     .        ' pulsed jet, invalid duty cycle d_cyc=',
+     .        d_cyc
+            call termn8(myid,-1,ibufdim,nbuf,bou,nou)
+          endif
+          ts99max = ccmin(d_cyc, 1.0-d_cyc)*t_cyc
+          if (abs(t_s99).gt.ts99max) then 
+            write(bou(nou(1),1),'(A,2(A,E10.3),A)')
+     .      ' stopping in bc2036...',
+     .      ' pulsed jet, invalid t_s99=', t_s99, 
+     .      ' must not be greater than ', ts99max
+            call termn8(myid,-1,ibufdim,nbuf,bou,nou)
+          endif
+        endif
+      end subroutine bc2036_check

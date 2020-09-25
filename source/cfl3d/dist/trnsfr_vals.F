@@ -251,6 +251,7 @@ c
 
       common /gust/ igust
       common /fdsblend/ ifdsblend, cfdsblend, cfds_smin, cfds_smax
+      common /walljet/ turwj(7)
 #if defined DIST_MPI
 c
 c***********************
@@ -614,6 +615,13 @@ c
          work(nlast+190)= fkh_max
          work(nlast+191)= fkh_a1
          work(nlast+192)= fkh_a2
+         work(nlast+193) = turwj(1)
+         work(nlast+194) = turwj(2)
+         work(nlast+195) = turwj(3)
+         work(nlast+196) = turwj(4)
+         work(nlast+197) = turwj(5)
+         work(nlast+198) = turwj(6)
+         work(nlast+199) = turwj(7)
          nlast = nlast+nkey
       end if
 c
@@ -986,6 +994,13 @@ c
          fkh_max   = work(nlast+190)
          fkh_a1    = work(nlast+191)
          fkh_a2    = work(nlast+192)
+         turwj(1) = work(nlast+193)
+         turwj(2) = work(nlast+194)
+         turwj(3) = work(nlast+195)
+         turwj(4) = work(nlast+196)
+         turwj(5) = work(nlast+197)
+         turwj(6) = work(nlast+198)
+         turwj(7) = work(nlast+199)
       end if
 c
 c**************************
