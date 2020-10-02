@@ -129,7 +129,7 @@ c
       common /iupdate/ iupdatemean
       common /wallvel_2034/ uub_2034,vvb_2034,wwb_2034,vvb_xaxisrot2034
       common /gust/ igust
-      common /fdsblend/ ifdsblend, cfdsblend, cfds_smin, cfds_smax
+      common /fdsblend/ ifdsblend,cfdsblend,cfds_smin,cfds_smax,ifdsdump
       common /slasgs/ fkh_min, fkh_max, fkh_a1, fkh_a2
       common /walljet/ turwj(7)
 c
@@ -1047,7 +1047,8 @@ c   ifdsblend=1 blend roe flux, with constant 'cfdsblend'
       cfdsblend= 1.0
       cfds_smin= 0.05
       cfds_smax= 1.0
-      nkey     = nkey + 4
+      ifdsdump = 0
+      nkey     = nkey + 5
 c     Ref: DOI 10.1007/s10494-015-9618-0
       fkh_min  = 0.1
       fkh_max  = 1.0
@@ -2103,6 +2104,9 @@ c
       else if (inpstr(lc1:lc2).eq.'ifdsblend') then
          lc2 = lc2 +1
          read(inpstr(lc2:lcl),*) ifdsblend
+      else if (inpstr(lc1:lc2).eq.'ifdsdump') then
+         lc2 = lc2 +1
+         read(inpstr(lc2:lcl),*) ifdsdump
       else if (inpstr(lc1:lc2).eq.'cfdsblend') then
          lc2 = lc2 +1
          read(inpstr(lc2:lcl),*) realval(1)

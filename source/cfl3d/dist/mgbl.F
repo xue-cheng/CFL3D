@@ -289,7 +289,7 @@ c
       common /deformz/ beta1,beta2,alpha1,alpha2,isktyp,negvol,meshdef,
      .                 nsprgit,ndgrd,ndwrt 
 
-      common /fdsblend/ ifdsblend, cfdsblend, cfds_smin, cfds_smax
+      common /fdsblend/ ifdsblend,cfdsblend,cfds_smin,cfds_smax,ifdsdump
       allocatable :: rmstr(:,:)
       allocatable :: nneg(:,:)
 c

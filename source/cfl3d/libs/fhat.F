@@ -45,7 +45,7 @@ c
       common /precond/ cprec,uref,avn
       common /entfix/ epsa_l,epsa_r
       common /zero/iexp
-      common /fdsblend/ ifdsblend, cfdsblend, cfds_smin, cfds_smax
+      common /fdsblend/ ifdsblend,cfdsblend,cfds_smin,cfds_smax,ifdsdump
 
 c     Low-dissipasion corrction 
       sigma = cfdsblend

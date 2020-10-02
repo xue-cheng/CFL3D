@@ -42,8 +42,8 @@ contains
   integer,intent(in):: nblock
   integer,intent(in):: levelg(nblock),mblk2nd(nblock)
   integer,intent(in):: jdimg(nblock),kdimg(nblock),idimg(nblock)
-  common /fdsblend/ ifdsblend, cfdsblend, cfds_smin, cfds_smax
-  integer :: ifdsblend
+  common /fdsblend/ ifdsblend,cfdsblend,cfds_smin,cfds_smax,ifdsdump
+  integer :: ifdsblend,ifdsdump
 #ifdef CMPLX
   complex(wp) :: cfdsblend, cfds_smin, cfds_smax
 #else 
@@ -85,8 +85,8 @@ contains
     integer :: nnodes,myhost,myid,mycomm
     common /mgrd/ levt,kode,mode,ncyc,mtt,icyc,level,lglobal
     integer :: levt,kode,mode,ncyc,mtt,icyc,level,lglobal
-    common /fdsblend/ ifdsblend, cfdsblend, cfds_smin, cfds_smax
-    integer :: ifdsblend
+    common /fdsblend/ ifdsblend,cfdsblend,cfds_smin,cfds_smax,ifdsdump
+    integer :: ifdsblend,ifdsdump
 #ifdef CMPLX
     complex(wp) :: cfdsblend, cfds_smin, cfds_smax
 #else 

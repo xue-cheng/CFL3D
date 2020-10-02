@@ -57,7 +57,7 @@ c
      .        idiag(3),nitfo,iflagts,iflim(3),nres,levelb(5),mgflag,
      .        iconsf,mseq,ncyc1(5),levelt(5),nitfo1(5),ngam,nsm(5),iipv
       common /sklton/ isklton
-      common /fdsblend/ ifdsblend, cfdsblend, cfds_smin, cfds_smax
+      common /fdsblend/ ifdsblend,cfdsblend,cfds_smin,cfds_smax,ifdsdump
 c
       jdim1 = jdim-1
       idim1 = idim-1

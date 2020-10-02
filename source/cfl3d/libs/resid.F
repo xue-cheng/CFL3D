@@ -126,7 +126,7 @@ c
       common /constit/ i_nonlin,c_nonlin,snonlin_lim,i_tauijs,i_qcr2000,
      .                 i_qcr2013,i_qcr2013v
       common /reystressmodel/ issglrrw2012,i_sas_rsm,i_yapterm
-      common /fdsblend/ ifdsblend, cfdsblend, cfds_smin, cfds_smax
+      common /fdsblend/ ifdsblend,cfdsblend,cfds_smin,cfds_smax,ifdsdump
 c
       jdim1 = jdim-1
       kdim1 = kdim-1
@@ -954,17 +954,12 @@ c   *********
 c
 c     dump sigma
 c
-      idumpfdsb=1
-
-      if ((idumpfdsb.ne.0)  .and.
+      if ((ifdsdump.ne.0)  .and.
      .    (ifdsblend.ge.2)  .and.
      .    (icyc.eq.ncyc)    .and.
      .    (ntime.eq.nit)    .and. 
      .    (level.ge.lglobal).and.
-     o    ( (real(dt).lt.0) .or.     ! steady state
-     .      (nt.eq.ntstep)  .or.     ! final time step
-     .      (nt.eq.nt/nwrest*nwrest) ! write restart
-     o    )) then
+     .    ((real(dt).lt.0) .or. (nt.eq.ntstep))) then
         call fds_sigma(nbl)%dump(nres, x, y, z)
       endif
 

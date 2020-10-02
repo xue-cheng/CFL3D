@@ -250,7 +250,7 @@ c
       common /wallvel_2034/ uub_2034,vvb_2034,wwb_2034,vvb_xaxisrot2034
 
       common /gust/ igust
-      common /fdsblend/ ifdsblend, cfdsblend, cfds_smin, cfds_smax
+      common /fdsblend/ ifdsblend,cfdsblend,cfds_smin,cfds_smax,ifdsdump
       common /walljet/ turwj(7)
 #if defined DIST_MPI
 c
@@ -622,6 +622,7 @@ c
          work(nlast+197) = turwj(5)
          work(nlast+198) = turwj(6)
          work(nlast+199) = turwj(7)
+         work(nlast+200)= ifdsdump
          nlast = nlast+nkey
       end if
 c
@@ -1001,6 +1002,7 @@ c
          turwj(5) = work(nlast+197)
          turwj(6) = work(nlast+198)
          turwj(7) = work(nlast+199)
+         ifdsdump = int(work(nlast+200))
       end if
 c
 c**************************
