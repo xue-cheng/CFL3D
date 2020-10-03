@@ -948,8 +948,9 @@ c
          filname = bcfiles(bcfilei(nbl,nseg,mm))
          do 1425 l=1,12
  1425    bcdat(l) = bcvali(nbl,nseg,l,mm)
+         ibc=abs(ibcinfo(nbl,nseg,1,mm))
          call readdat(w(ldata),mdim,ndim,filname,bcdat,nou,bou,nbuf,
-     .                ibufdim,myid,mblk2nd,maxbl)
+     .                ibufdim,myid,mblk2nd,maxbl,ibc)
 #if defined DIST_MPI
          mytag = itag_bci0 + itag2k
          call MPI_Send (w(ldata), nvals, MY_MPI_REAL,
@@ -978,8 +979,9 @@ c
          filname = bcfiles(bcfilei(nbl,nseg,mm))
          do 1435 l=1,12
  1435    bcdat(l) = bcvali(nbl,nseg,l,mm)
+         ibc=abs(ibcinfo(nbl,nseg,1,mm))
          call readdat(w(ldata),mdim,ndim,filname,bcdat,nou,bou,nbuf,
-     .                ibufdim,myid,mblk2nd,maxbl)
+     .                ibufdim,myid,mblk2nd,maxbl,ibc)
 #if defined DIST_MPI
          mytag = itag_bcid + itag2k
          call MPI_Send (w(ldata), nvals, MY_MPI_REAL,
@@ -1008,8 +1010,9 @@ c
          filname = bcfiles(bcfilej(nbl,nseg,mm))
          do 1445 l=1,12
  1445    bcdat(l) = bcvalj(nbl,nseg,l,mm)
+         ibc=abs(jbcinfo(nbl,nseg,1,mm))
          call readdat(w(ldata),mdim,ndim,filname,bcdat,nou,bou,nbuf,
-     .                ibufdim,myid,mblk2nd,maxbl)
+     .                ibufdim,myid,mblk2nd,maxbl,ibc)
 #if defined DIST_MPI
          mytag = itag_bcj0 + itag2k
          call MPI_Send (w(ldata), nvals, MY_MPI_REAL,
@@ -1038,8 +1041,9 @@ c
          filname = bcfiles(bcfilej(nbl,nseg,mm))
          do 1455 l=1,12
  1455    bcdat(l) = bcvalj(nbl,nseg,l,mm)
+         ibc=abs(jbcinfo(nbl,nseg,1,mm))
          call readdat(w(ldata),mdim,ndim,filname,bcdat,nou,bou,nbuf,
-     .                ibufdim,myid,mblk2nd,maxbl)
+     .                ibufdim,myid,mblk2nd,maxbl,ibc)
 #if defined DIST_MPI
          mytag = itag_bcjd + itag2k
          call MPI_Send (w(ldata), nvals, MY_MPI_REAL,
@@ -1068,8 +1072,9 @@ c
          filname = bcfiles(bcfilek(nbl,nseg,mm))
          do 1465 l=1,12
  1465    bcdat(l) = bcvalk(nbl,nseg,l,mm)
+         ibc=abs(kbcinfo(nbl,nseg,1,mm))
          call readdat(w(ldata),mdim,ndim,filname,bcdat,nou,bou,nbuf,
-     .                ibufdim,myid,mblk2nd,maxbl)
+     .                ibufdim,myid,mblk2nd,maxbl,ibc)
 #if defined DIST_MPI
          mytag = itag_bck0 + itag2k
          call MPI_Send (w(ldata), nvals, MY_MPI_REAL,
@@ -1098,8 +1103,9 @@ c
          filname = bcfiles(bcfilek(nbl,nseg,mm))
          do 1475 l=1,12
  1475    bcdat(l) = bcvalk(nbl,nseg,l,mm)
+         ibc=abs(kbcinfo(nbl,nseg,1,mm))
          call readdat(w(ldata),mdim,ndim,filname,bcdat,nou,bou,nbuf,
-     .                ibufdim,myid,mblk2nd,maxbl)
+     .                ibufdim,myid,mblk2nd,maxbl,ibc)
 #if defined DIST_MPI
          mytag = itag_bckd + itag2k
          call MPI_Send (w(ldata), nvals, MY_MPI_REAL,

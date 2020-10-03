@@ -21,7 +21,7 @@ c  under the License.
 c  ---------------------------------------------------------------------------
 c
       subroutine readdat(bcdata,mdim,ndim,filname,bcdat,nou,bou,nbuf,
-     .                   ibufdim,myid,mblk2nd,maxbl)
+     .                   ibufdim,myid,mblk2nd,maxbl,ibc)
 c
 c     $Id$
 c
@@ -43,6 +43,7 @@ c
 c
       dimension nou(nbuf)
       dimension bcdata(mdim,ndim,2,12),bcdat(12),mblk2nd(maxbl)
+      common /igrdtyp/ ip3dgrd,ialph
 c
 
 #ifdef CMPLX
@@ -133,5 +134,19 @@ c
       deallocate(bcdatar)
 #endif
 c
+c     swap bcdata for ialph > 0 
+      if(ialph.ne.0) then
+        if(ibc.eq.2016.or.ibc.eq.2036) then 
+c        twtype cq0 cqu sjx sjy sjz ...
+c             1   2   3   4   5   6
+         do 40 ip=1,2
+         do 40 m=1,mdim
+         do 40 n=1,ndim
+          temp = bcdata(m,n,ip,6) 
+          bcdata(m,n,ip,6) = bcdata(m,n,ip,5)
+          bcdata(m,n,ip,5) = -temp
+   40 continue
+        endif
+      endif
       return
       end
