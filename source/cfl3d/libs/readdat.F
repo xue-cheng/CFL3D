@@ -136,16 +136,30 @@ c
 c
 c     swap bcdata for ialph > 0 
       if(ialph.ne.0) then
-        if(ibc.eq.2016.or.ibc.eq.2036) then 
+        if(ibc.eq.2016) then 
 c        twtype cq0 cqu sjx sjy sjz ...
 c             1   2   3   4   5   6
-         do 40 ip=1,2
-         do 40 m=1,mdim
-         do 40 n=1,ndim
-          temp = bcdata(m,n,ip,6) 
-          bcdata(m,n,ip,6) = bcdata(m,n,ip,5)
-          bcdata(m,n,ip,5) = -temp
-   40 continue
+          do ip=1,2
+            do m=1,mdim
+              do n=1,ndim
+                temp = bcdata(m,n,ip,6) 
+                bcdata(m,n,ip,6) = bcdata(m,n,ip,5)
+                bcdata(m,n,ip,5) = -temp
+              enddo
+            enddo
+          enddo
+        elseif(ibc.eq.2036) then
+c        twtype rho u v w
+c             1   2 3 4 5
+          do ip=1,2
+            do m=1,mdim
+              do n=1,ndim
+                temp = bcdata(m,n,ip,5) 
+                bcdata(m,n,ip,5) = bcdata(m,n,ip,4)
+                bcdata(m,n,ip,4) = -temp
+              enddo
+            enddo
+          enddo
         endif
       endif
       return

@@ -9064,8 +9064,6 @@ c        check that the required auxiliary data has been set
          do 1 k=ksta,kend1
          kk = k-ksta+1
          if (real(bcdata(kk,ii,ipp,l)) .lt. -1.e10) iflg = 1
-         if ((real(bcdata(kk,ii,ipp,l)).ne.0.0).and.
-     +       (real(dt).lt.0.).and.(l.eq.3)) iflg = 2
    1     continue
          if (iflg.eq.1) then
             nou(1) = min(nou(1)+1,ibufdim)
@@ -9074,88 +9072,66 @@ c        check that the required auxiliary data has been set
             write(bou(nou(1),1),*)'  viscous wall data incorrectly set '
             call termn8(myid,-1,ibufdim,nbuf,bou,nou)
          end if
-           if (iflg.eq.2) then
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),*)'  Stopping in bc2036:'
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),*)
-     +        '  unsteady jet not allowed with dt < 0'
-              call termn8(myid,-1,ibufdim,nbuf,bou,nou)
-           end if
 
          if (filname.eq.'null') then
             ctemp = bcdata(1,1,1,1)
-            cq0   = bcdata(1,1,1,2)
-            cqa   = bcdata(1,1,1,3)
-            sjetx = bcdata(1,1,1,4)
-            sjety = bcdata(1,1,1,5)
-            sjetz = bcdata(1,1,1,6)
-            t_cyc = bcdata(1,1,1,7)
-            t_s99 = bcdata(1,1,1,8)
-            d_cyc = bcdata(1,1,1,9)
+            rho   = bcdata(1,1,1,2)
+            uref  = bcdata(1,1,1,3)
+            vref  = bcdata(1,1,1,4)
+            wref  = bcdata(1,1,1,5)
+            t_on  = bcdata(1,1,1,6)
+            t_99  = bcdata(1,1,1,7)
             if (real(ctemp) .gt. 0.) then
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1001)ista,iend,ksta,kend
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1007) real(ctemp)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1008) real(cq0)
+              write(bou(nou(1),1),1008) real(rho)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1013) real(cqa)
+              write(bou(nou(1),1),1013) real(uref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1014) real(sjetx)
+              write(bou(nou(1),1),1014) real(vref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1015) real(sjety)
+              write(bou(nou(1),1),1015) real(wref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1016) real(sjetz)
+              write(bou(nou(1),1),1016) real(t_on)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1017) real(t_cyc)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1018) real(t_s99)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1019) real(d_cyc)
+              write(bou(nou(1),1),1017) real(t_99)
             else if (ctemp .eq. 0.) then
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1001)ista,iend,ksta,kend
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1009)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1008) real(cq0)
+              write(bou(nou(1),1),1008) real(rho)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1013) real(cqa)
+              write(bou(nou(1),1),1013) real(uref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1014) real(sjetx)
+              write(bou(nou(1),1),1014) real(vref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1015) real(sjety)
+              write(bou(nou(1),1),1015) real(wref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1016) real(sjetz)
+              write(bou(nou(1),1),1016) real(t_on)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1017) real(t_cyc)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1018) real(t_s99)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1019) real(d_cyc)
+              write(bou(nou(1),1),1017) real(t_99)
             else
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1001)ista,iend,ksta,kend
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1010)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1008) real(cq0)
+              write(bou(nou(1),1),1008) real(rho)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1013) real(cqa)
+              write(bou(nou(1),1),1013) real(uref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1014) real(sjetx)
+              write(bou(nou(1),1),1014) real(vref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1015) real(sjety)
+              write(bou(nou(1),1),1015) real(wref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1016) real(sjetz)
+              write(bou(nou(1),1),1016) real(t_on)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1017) real(t_cyc)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1018) real(t_s99)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1019) real(d_cyc)
+              write(bou(nou(1),1),1017) real(t_99)
             end if
          else
             nou(1) = min(nou(1)+1,ibufdim)
@@ -9182,8 +9158,6 @@ c        check that the required auxiliary data has been set
          do 2 k=ksta,kend1
          kk = k-ksta+1
          if (real(bcdata(kk,ii,ipp,l)) .lt. -1.e10) iflg = 1
-         if ((real(bcdata(kk,ii,ipp,l)).ne.0.0).and.
-     +       (real(dt).lt.0.).and.(l.eq.3)) iflg = 2
    2     continue
          if (iflg.eq.1) then
             nou(1) = min(nou(1)+1,ibufdim)
@@ -9192,88 +9166,66 @@ c        check that the required auxiliary data has been set
             write(bou(nou(1),1),*)'  viscous wall data incorrectly set '
             call termn8(myid,-1,ibufdim,nbuf,bou,nou)
          end if
-           if (iflg.eq.2) then
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),*)'  Stopping in bc2036:'
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),*)
-     +        '  unsteady jet not allowed with dt < 0'
-              call termn8(myid,-1,ibufdim,nbuf,bou,nou)
-           end if
 
          if (filname.eq.'null') then
             ctemp = bcdata(1,1,1,1)
-            cq0   = bcdata(1,1,1,2)
-            cqa   = bcdata(1,1,1,3)
-            sjetx = bcdata(1,1,1,4)
-            sjety = bcdata(1,1,1,5)
-            sjetz = bcdata(1,1,1,6)
-            t_cyc = bcdata(1,1,1,7)
-            t_s99 = bcdata(1,1,1,8)
-            d_cyc = bcdata(1,1,1,9)
+            rho   = bcdata(1,1,1,2)
+            uref  = bcdata(1,1,1,3)
+            vref  = bcdata(1,1,1,4)
+            wref  = bcdata(1,1,1,5)
+            t_on  = bcdata(1,1,1,6)
+            t_99  = bcdata(1,1,1,7)
             if (real(ctemp) .gt. 0.) then
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1002)ista,iend,ksta,kend
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1007) real(ctemp)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1008) real(cq0)
+              write(bou(nou(1),1),1008) real(rho)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1013) real(cqa)
+              write(bou(nou(1),1),1013) real(uref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1014) real(sjetx)
+              write(bou(nou(1),1),1014) real(vref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1015) real(sjety)
+              write(bou(nou(1),1),1015) real(wref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1016) real(sjetz)
+              write(bou(nou(1),1),1016) real(t_on)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1017) real(t_cyc)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1018) real(t_s99)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1019) real(d_cyc)
+              write(bou(nou(1),1),1017) real(t_99)
             else if (ctemp .eq. 0.) then
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1002)ista,iend,ksta,kend
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1009)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1008) real(cq0)
+              write(bou(nou(1),1),1008) real(rho)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1013) real(cqa)
+              write(bou(nou(1),1),1013) real(uref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1014) real(sjetx)
+              write(bou(nou(1),1),1014) real(vref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1015) real(sjety)
+              write(bou(nou(1),1),1015) real(wref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1016) real(sjetz)
+              write(bou(nou(1),1),1016) real(t_on)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1017) real(t_cyc)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1018) real(t_s99)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1019) real(d_cyc)
+              write(bou(nou(1),1),1017) real(t_99)
             else
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1002)ista,iend,ksta,kend
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1010)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1008) real(cq0)
+              write(bou(nou(1),1),1008) real(rho)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1013) real(cqa)
+              write(bou(nou(1),1),1013) real(uref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1014) real(sjetx)
+              write(bou(nou(1),1),1014) real(vref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1015) real(sjety)
+              write(bou(nou(1),1),1015) real(wref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1016) real(sjetz)
+              write(bou(nou(1),1),1016) real(t_on)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1017) real(t_cyc)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1018) real(t_s99)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1019) real(d_cyc)
+              write(bou(nou(1),1),1017) real(t_99)
             end if
          else
             nou(1) = min(nou(1)+1,ibufdim)
@@ -9300,8 +9252,6 @@ c        check that the required auxiliary data has been set
          do 3 j=jsta,jend1
          jj = j-jsta+1
          if (real(bcdata(jj,ii,ipp,l)) .lt. -1.e10) iflg = 1
-         if ((real(bcdata(jj,ii,ipp,l)).ne.0.0).and.
-     +       (real(dt).lt.0.).and.(l.eq.3)) iflg = 2
    3     continue
          if (iflg.eq.1) then
             nou(1) = min(nou(1)+1,ibufdim)
@@ -9310,88 +9260,66 @@ c        check that the required auxiliary data has been set
             write(bou(nou(1),1),*)'  viscous wall data incorrectly set '
             call termn8(myid,-1,ibufdim,nbuf,bou,nou)
          end if
-           if (iflg.eq.2) then
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),*)'  Stopping in bc2036:'
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),*)
-     +        '  unsteady jet not allowed with dt < 0'
-              call termn8(myid,-1,ibufdim,nbuf,bou,nou)
-           end if
 
          if (filname.eq.'null') then
             ctemp = bcdata(1,1,1,1)
-            cq0   = bcdata(1,1,1,2)
-            cqa   = bcdata(1,1,1,3)
-            sjetx = bcdata(1,1,1,4)
-            sjety = bcdata(1,1,1,5)
-            sjetz = bcdata(1,1,1,6)
-            t_cyc = bcdata(1,1,1,7)
-            t_s99 = bcdata(1,1,1,8)
-            d_cyc = bcdata(1,1,1,9)
+            rho   = bcdata(1,1,1,2)
+            uref  = bcdata(1,1,1,3)
+            vref  = bcdata(1,1,1,4)
+            wref  = bcdata(1,1,1,5)
+            t_on  = bcdata(1,1,1,6)
+            t_99  = bcdata(1,1,1,7)
             if (real(ctemp) .gt. 0.) then
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1003)ista,iend,jsta,jend
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1007) real(ctemp)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1008) real(cq0)
+              write(bou(nou(1),1),1008) real(rho)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1013) real(cqa)
+              write(bou(nou(1),1),1013) real(uref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1014) real(sjetx)
+              write(bou(nou(1),1),1014) real(vref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1015) real(sjety)
+              write(bou(nou(1),1),1015) real(wref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1016) real(sjetz)
+              write(bou(nou(1),1),1016) real(t_on)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1017) real(t_cyc)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1018) real(t_s99)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1019) real(d_cyc)
+              write(bou(nou(1),1),1017) real(t_99)
             else if (ctemp .eq. 0.) then
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1003)ista,iend,ksta,kend
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1009)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1008) real(cq0)
+              write(bou(nou(1),1),1008) real(rho)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1013) real(cqa)
+              write(bou(nou(1),1),1013) real(uref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1014) real(sjetx)
+              write(bou(nou(1),1),1014) real(vref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1015) real(sjety)
+              write(bou(nou(1),1),1015) real(wref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1016) real(sjetz)
+              write(bou(nou(1),1),1016) real(t_on)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1017) real(t_cyc)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1018) real(t_s99)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1019) real(d_cyc)
+              write(bou(nou(1),1),1017) real(t_99)
             else
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1003)ista,iend,ksta,kend
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1010)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1008) real(cq0)
+              write(bou(nou(1),1),1008) real(rho)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1013) real(cqa)
+              write(bou(nou(1),1),1013) real(uref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1014) real(sjetx)
+              write(bou(nou(1),1),1014) real(vref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1015) real(sjety)
+              write(bou(nou(1),1),1015) real(wref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1016) real(sjetz)
+              write(bou(nou(1),1),1016) real(t_on)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1017) real(t_cyc)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1018) real(t_s99)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1019) real(d_cyc)
+              write(bou(nou(1),1),1017) real(t_99)
             end if
          else
             nou(1) = min(nou(1)+1,ibufdim)
@@ -9418,8 +9346,6 @@ c        check that the required auxiliary data has been set
          do 4 j=jsta,jend1
          jj = j-jsta+1
          if (real(bcdata(jj,ii,ipp,l)) .lt. -1.e10) iflg = 1
-         if ((real(bcdata(jj,ii,ipp,l)).ne.0.0).and.
-     +       (real(dt).lt.0.).and.(l.eq.3)) iflg = 2
    4     continue
          if (iflg.eq.1) then
             nou(1) = min(nou(1)+1,ibufdim)
@@ -9428,88 +9354,66 @@ c        check that the required auxiliary data has been set
             write(bou(nou(1),1),*)'  viscous wall data incorrectly set '
             call termn8(myid,-1,ibufdim,nbuf,bou,nou)
          end if
-           if (iflg.eq.2) then
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),*)'  Stopping in bc2036:'
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),*)
-     +        '  unsteady jet not allowed with dt < 0'
-              call termn8(myid,-1,ibufdim,nbuf,bou,nou)
-           end if
 
          if (filname.eq.'null') then
             ctemp = bcdata(1,1,1,1)
-            cq0   = bcdata(1,1,1,2)
-            cqa   = bcdata(1,1,1,3)
-            sjetx = bcdata(1,1,1,4)
-            sjety = bcdata(1,1,1,5)
-            sjetz = bcdata(1,1,1,6)
-            t_cyc = bcdata(1,1,1,7)
-            t_s99 = bcdata(1,1,1,8)
-            d_cyc = bcdata(1,1,1,9)
+            rho   = bcdata(1,1,1,2)
+            uref  = bcdata(1,1,1,3)
+            vref  = bcdata(1,1,1,4)
+            wref  = bcdata(1,1,1,5)
+            t_on  = bcdata(1,1,1,6)
+            t_99  = bcdata(1,1,1,7)
             if (real(ctemp) .gt. 0.) then
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1004)ista,iend,ksta,kend
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1007) real(ctemp)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1008) real(cq0)
+              write(bou(nou(1),1),1008) real(rho)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1013) real(cqa)
+              write(bou(nou(1),1),1013) real(uref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1014) real(sjetx)
+              write(bou(nou(1),1),1014) real(vref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1015) real(sjety)
+              write(bou(nou(1),1),1015) real(wref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1016) real(sjetz)
+              write(bou(nou(1),1),1016) real(t_on)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1017) real(t_cyc)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1018) real(t_s99)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1019) real(d_cyc)
+              write(bou(nou(1),1),1017) real(t_99)
             else if (ctemp .eq. 0.) then
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1004)ista,iend,ksta,kend
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1009)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1008) real(cq0)
+              write(bou(nou(1),1),1008) real(rho)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1013) real(cqa)
+              write(bou(nou(1),1),1013) real(uref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1014) real(sjetx)
+              write(bou(nou(1),1),1014) real(vref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1015) real(sjety)
+              write(bou(nou(1),1),1015) real(wref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1016) real(sjetz)
+              write(bou(nou(1),1),1016) real(t_on)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1017) real(t_cyc)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1018) real(t_s99)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1019) real(d_cyc)
+              write(bou(nou(1),1),1017) real(t_99)
             else
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1004)ista,iend,ksta,kend
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1010)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1008) real(cq0)
+              write(bou(nou(1),1),1008) real(rho)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1013) real(cqa)
+              write(bou(nou(1),1),1013) real(uref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1014) real(sjetx)
+              write(bou(nou(1),1),1014) real(vref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1015) real(sjety)
+              write(bou(nou(1),1),1015) real(wref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1016) real(sjetz)
+              write(bou(nou(1),1),1016) real(t_on)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1017) real(t_cyc)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1018) real(t_s99)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1019) real(d_cyc)
+              write(bou(nou(1),1),1017) real(t_99)
             end if
          else
             nou(1) = min(nou(1)+1,ibufdim)
@@ -9536,8 +9440,6 @@ c        check that the required auxiliary data has been set
          do 5 j=jsta,jend1
          jj = j-jsta+1
          if (real(bcdata(jj,kk,ipp,l)) .lt. -1.e10) iflg = 1
-         if ((real(bcdata(jj,kk,ipp,l)).ne.0.0).and.
-     +       (real(dt).lt.0.).and.(l.eq.3)) iflg = 2
    5     continue
          if (iflg.eq.1) then
             nou(1) = min(nou(1)+1,ibufdim)
@@ -9546,88 +9448,66 @@ c        check that the required auxiliary data has been set
             write(bou(nou(1),1),*)'  viscous wall data incorrectly set '
             call termn8(myid,-1,ibufdim,nbuf,bou,nou)
          end if
-           if (iflg.eq.2) then
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),*)'  Stopping in bc2036:'
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),*)
-     +        '  unsteady jet not allowed with dt < 0'
-              call termn8(myid,-1,ibufdim,nbuf,bou,nou)
-           end if
 
          if (filname.eq.'null') then
             ctemp = bcdata(1,1,1,1)
-            cq0   = bcdata(1,1,1,2)
-            cqa   = bcdata(1,1,1,3)
-            sjetx = bcdata(1,1,1,4)
-            sjety = bcdata(1,1,1,5)
-            sjetz = bcdata(1,1,1,6)
-            t_cyc = bcdata(1,1,1,7)
-            t_s99 = bcdata(1,1,1,8)
-            d_cyc = bcdata(1,1,1,9)
+            rho   = bcdata(1,1,1,2)
+            uref  = bcdata(1,1,1,3)
+            vref  = bcdata(1,1,1,4)
+            wref  = bcdata(1,1,1,5)
+            t_on  = bcdata(1,1,1,6)
+            t_99  = bcdata(1,1,1,7)
             if (real(ctemp) .gt. 0.) then
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1005)ista,iend,ksta,kend
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1007) real(ctemp)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1008) real(cq0)
+              write(bou(nou(1),1),1008) real(rho)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1013) real(cqa)
+              write(bou(nou(1),1),1013) real(uref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1014) real(sjetx)
+              write(bou(nou(1),1),1014) real(vref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1015) real(sjety)
+              write(bou(nou(1),1),1015) real(wref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1016) real(sjetz)
+              write(bou(nou(1),1),1016) real(t_on)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1017) real(t_cyc)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1018) real(t_s99)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1019) real(d_cyc)
+              write(bou(nou(1),1),1017) real(t_99)
             else if (ctemp .eq. 0.) then
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1005)ista,iend,ksta,kend
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1009)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1008) real(cq0)
+              write(bou(nou(1),1),1008) real(rho)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1013) real(cqa)
+              write(bou(nou(1),1),1013) real(uref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1014) real(sjetx)
+              write(bou(nou(1),1),1014) real(vref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1015) real(sjety)
+              write(bou(nou(1),1),1015) real(wref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1016) real(sjetz)
+              write(bou(nou(1),1),1016) real(t_on)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1017) real(t_cyc)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1018) real(t_s99)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1019) real(d_cyc)
+              write(bou(nou(1),1),1017) real(t_99)
             else
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1005)ista,iend,ksta,kend
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1010)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1008) real(cq0)
+              write(bou(nou(1),1),1008) real(rho)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1013) real(cqa)
+              write(bou(nou(1),1),1013) real(uref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1014) real(sjetx)
+              write(bou(nou(1),1),1014) real(vref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1015) real(sjety)
+              write(bou(nou(1),1),1015) real(wref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1016) real(sjetz)
+              write(bou(nou(1),1),1016) real(t_on)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1017) real(t_cyc)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1018) real(t_s99)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1019) real(d_cyc)
+              write(bou(nou(1),1),1017) real(t_99)
             end if
          else
             nou(1) = min(nou(1)+1,ibufdim)
@@ -9654,8 +9534,6 @@ c        check that the required auxiliary data has been set
          do 6 j=jsta,jend1
          jj = j-jsta+1
          if (real(bcdata(jj,kk,ipp,l)) .lt. -1.e10) iflg = 1
-         if ((real(bcdata(jj,kk,ipp,l)).ne.0.0).and.
-     +       (real(dt).lt.0.).and.(l.eq.3)) iflg = 2
    6     continue
          if (iflg.eq.1) then
             nou(1) = min(nou(1)+1,ibufdim)
@@ -9664,88 +9542,66 @@ c        check that the required auxiliary data has been set
             write(bou(nou(1),1),*)'  viscous wall data incorrectly set '
             call termn8(myid,-1,ibufdim,nbuf,bou,nou)
          end if
-           if (iflg.eq.2) then
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),*)'  Stopping in bc2036:'
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),*)
-     +        '  unsteady jet not allowed with dt < 0'
-              call termn8(myid,-1,ibufdim,nbuf,bou,nou)
-           end if
 
          if (filname.eq.'null') then
             ctemp = bcdata(1,1,1,1)
-            cq0   = bcdata(1,1,1,2)
-            cqa   = bcdata(1,1,1,3)
-            sjetx = bcdata(1,1,1,4)
-            sjety = bcdata(1,1,1,5)
-            sjetz = bcdata(1,1,1,6)
-            t_cyc = bcdata(1,1,1,7)
-            t_s99 = bcdata(1,1,1,8)
-            d_cyc = bcdata(1,1,1,9)
+            rho   = bcdata(1,1,1,2)
+            uref  = bcdata(1,1,1,3)
+            vref  = bcdata(1,1,1,4)
+            wref  = bcdata(1,1,1,5)
+            t_on  = bcdata(1,1,1,6)
+            t_99  = bcdata(1,1,1,7)
             if (real(ctemp) .gt. 0.) then
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1006)ista,iend,ksta,kend
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1007) real(ctemp)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1008) real(cq0)
+              write(bou(nou(1),1),1008) real(rho)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1013) real(cqa)
+              write(bou(nou(1),1),1013) real(uref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1014) real(sjetx)
+              write(bou(nou(1),1),1014) real(vref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1015) real(sjety)
+              write(bou(nou(1),1),1015) real(wref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1016) real(sjetz)
+              write(bou(nou(1),1),1016) real(t_on)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1017) real(t_cyc)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1018) real(t_s99)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1019) real(d_cyc)
+              write(bou(nou(1),1),1017) real(t_99)
             else if (ctemp .eq. 0.) then
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1006)ista,iend,ksta,kend
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1009)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1008) real(cq0)
+              write(bou(nou(1),1),1008) real(rho)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1013) real(cqa)
+              write(bou(nou(1),1),1013) real(uref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1014) real(sjetx)
+              write(bou(nou(1),1),1014) real(vref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1015) real(sjety)
+              write(bou(nou(1),1),1015) real(wref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1016) real(sjetz)
+              write(bou(nou(1),1),1016) real(t_on)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1017) real(t_cyc)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1018) real(t_s99)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1019) real(d_cyc)
+              write(bou(nou(1),1),1017) real(t_99)
             else
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1006)ista,iend,ksta,kend
               nou(1) = min(nou(1)+1,ibufdim)
               write(bou(nou(1),1),1010)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1008) real(cq0)
+              write(bou(nou(1),1),1008) real(rho)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1013) real(cqa)
+              write(bou(nou(1),1),1013) real(uref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1014) real(sjetx)
+              write(bou(nou(1),1),1014) real(vref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1015) real(sjety)
+              write(bou(nou(1),1),1015) real(wref)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1016) real(sjetz)
+              write(bou(nou(1),1),1016) real(t_on)
               nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1017) real(t_cyc)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1018) real(t_s99)
-              nou(1) = min(nou(1)+1,ibufdim)
-              write(bou(nou(1),1),1019) real(d_cyc)
+              write(bou(nou(1),1),1017) real(t_99)
             end if
          else
             nou(1) = min(nou(1)+1,ibufdim)
@@ -9774,18 +9630,16 @@ c
  1006 format(' ','  i=idim  viscous wall                   type 2036',
      .       '  j=',i5,',',i5,'  k=',i5,',',i5)
  1007 format(11x,'Tw/Tinf    = ',f8.4)
- 1008 format(11x,'cq0        = ',f8.4)
+ 1008 format(11x,'rho/rho_ref= ',f8.4)
  1009 format(11x,'Tw/Tinf    = adiabatic wall')
  1010 format(11x,'Tw/Tinf    = stagnation')
  1011 format(11x,'Twtype, C_q set from file:')
  1012 format('           ',a60)
- 1013 format(11x,'cqu        = ',f8.4)
- 1014 format(11x,'sjetx      = ',f8.4)
- 1015 format(11x,'sjety      = ',f8.4)
- 1016 format(11x,'sjetz      = ',f8.4)
- 1017 format(11x,'t_cyc      = ',f8.4)
- 1018 format(11x,'t_s99      = ',f8.4)
- 1019 format(11x,'d_cyc      = ',f8.4)
+ 1013 format(11x,'u/a_ref    = ',f8.4)
+ 1014 format(11x,'v/a_ref    = ',f8.4)
+ 1015 format(11x,'w/a_ref    = ',f8.4)
+ 1016 format(11x,'t_on       = ',f8.4)
+ 1017 format(11x,'t_99       = ',f8.4)
 c
  3001 format(' ',10x,'Wall function employed in j-direction')
  3002 format(' ',10x,'Wall function employed in k-direction')

@@ -131,7 +131,6 @@ c
       common /gust/ igust
       common /fdsblend/ ifdsblend,cfdsblend,cfds_smin,cfds_smax,ifdsdump
       common /slasgs/ fkh_min, fkh_max, fkh_a1, fkh_a2
-      common /walljet/ turwj(7)
 c
       ititr = 0
       nkey  = 0
@@ -1055,15 +1054,6 @@ c     Ref: DOI 10.1007/s10494-015-9618-0
       fkh_a1   = 0.15
       fkh_a2   = 0.3
       nkey     = nkey + 4
-
-      turwj(1) = -1.
-      turwj(2) = -1.
-      turwj(3) = -1.
-      turwj(4) = -1.
-      turwj(5) = -1.
-      turwj(6) = -1.
-      turwj(7) = -1.
-      nkey     = nkey + 7
 
 c
 c*********************************************
@@ -2104,9 +2094,6 @@ c
       else if (inpstr(lc1:lc2).eq.'ifdsblend') then
          lc2 = lc2 +1
          read(inpstr(lc2:lcl),*) ifdsblend
-      else if (inpstr(lc1:lc2).eq.'ifdsdump') then
-         lc2 = lc2 +1
-         read(inpstr(lc2:lcl),*) ifdsdump
       else if (inpstr(lc1:lc2).eq.'cfdsblend') then
          lc2 = lc2 +1
          read(inpstr(lc2:lcl),*) realval(1)
@@ -2119,6 +2106,9 @@ c
          lc2 = lc2 +1
          read(inpstr(lc2:lcl),*) realval(1)
          cfds_smax = realval(1)
+      else if (inpstr(lc1:lc2).eq.'ifdsdump') then
+         lc2 = lc2 +1
+         read(inpstr(lc2:lcl),*) ifdsdump
 c         
       else if (inpstr(lc1:lc2).eq.'fkh_min') then 
         lc2 = lc2 +1
@@ -2136,34 +2126,6 @@ c
         lc2 = lc2 +1
         read(inpstr(lc2:lcl),*) realval(1)
         fkh_a2 = realval(1)
-      else if (inpstr(lc1:lc2).eq.'turwj1') then 
-        lc2 = lc2 +1
-        read(inpstr(lc2:lcl),*) realval(1)
-        turwj(1) = realval(1)
-      else if (inpstr(lc1:lc2).eq.'turwj2') then 
-        lc2 = lc2 +1
-        read(inpstr(lc2:lcl),*) realval(1)
-        turwj(2) = realval(1)
-      else if (inpstr(lc1:lc2).eq.'turwj3') then 
-        lc2 = lc2 +1
-        read(inpstr(lc2:lcl),*) realval(1)
-        turwj(3) = realval(1)
-      else if (inpstr(lc1:lc2).eq.'turwj4') then 
-        lc2 = lc2 +1
-        read(inpstr(lc2:lcl),*) realval(1)
-        turwj(4) = realval(1)
-      else if (inpstr(lc1:lc2).eq.'turwj5') then 
-        lc2 = lc2 +1
-        read(inpstr(lc2:lcl),*) realval(1)
-        turwj(5) = realval(1)
-      else if (inpstr(lc1:lc2).eq.'turwj6') then 
-        lc2 = lc2 +1
-        read(inpstr(lc2:lcl),*) realval(1)
-        turwj(6) = realval(1)
-      else if (inpstr(lc1:lc2).eq.'turwj7') then 
-        lc2 = lc2 +1
-        read(inpstr(lc2:lcl),*) realval(1)
-        turwj(7) = realval(1)
 c
       else
 c

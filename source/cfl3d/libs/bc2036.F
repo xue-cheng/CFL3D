@@ -33,7 +33,7 @@ c     $Id$
 c
 c***********************************************************************
 c     Purpose:  Set pulsed wall jet BC (viscous wall)
-c               with 9 pieces of auxiliary data:
+c               with 7 pieces of auxiliary data:
 c
 c     This is a mod to bc2016, by XUE Cheng
 c
@@ -42,52 +42,18 @@ c              Twtype > 0 (fixed wall temperature Tw/Tinf = Twtype)
 c              Twtype = 0 (adiabatic wall)
 c              Twtype < 0 (fixed wall temperature = stagnation temp)
 c
-c           2) cq0  = base component of surface jet
-c           3) cqu = unsteady component of surface jet
-c              Set surface jet boundary conditions via mass-flow 
-c              coefficient:
-c                                             (rho * u)_jet
-c              mass-flow coefficient cqt  = ------------------ 
-c                                           (rho * u)_infinity
-c           4) sjetx = direction number for surface jet (x-direction)
-c           5) sjety = direction number for surface jet (y-direction)
-c           6) sjetz = direction number for surface jet (z-direction)
-c           7) t_cyc = period or start time, see d_cyc
-c           8) t_s99 = time of the pulsed jet achieving its maximum value
-c           9) d_cyc :
-c              d_cyc > 0 pulsed jet
-c              d_cyc = 0 one-shot jet
-c              d_cyc < 0 one-minus-cosine
-c             a) pulsed jet (d_cyc>0):
-c                d_cyc = duty cycle of the pulse between (0, 1)
-c                t_cyc = period of unsteady jet
-c                t_s99 = time of the pulsed jet achieving its maximum value
-c                  t_s99 = 0 => step function
-c                  t_s99 > 0 => tanh function
-c                  t_s99 < 0 => linear function
-c             b) one-shot jet (d_cyc = 0):
-c                t < t_cyc       => cqt = cq0
-c                t > t_cyc+t_s99 => cqt = cq0+cqu
-c                t_cyc = jet start time
-c                t_s99 = time of the pulsed jet achieving its maximum value
-c                  t_s99 = 0 => step function
-c                  t_s99 > 0 => tanh function
-c                  t_s99 < 0 => linear function
-c             c) one-minus-cosine jet (d_cyc < 0):
-c                d_cyc = -1 => continuous
-c                d_cyc = -2 => single wave
-c                t_s99 = half period
-c                t_cyc = jet start time
-c                if t < t_cyc:
-c                  cqt = cq0
-c                else:
-c                  cqt = cq0 + 0.5(1-cos)*cqu
-c              NOTES:
-c              1.  input direction numbers do not have to be normalized
-c              2.  Set (sjetx,sjety,sjetz) = (0.0,0.0,0.0) for a
-c                  wall-normal surface jet.  In this case,
-c                  cq > 0 ==> injection
-c                  cq < 0 ==> suction
+c           2) rho/rho_ref = density of injection
+c
+c           3) u/a_ref = x-component of jet velocity
+c           4) v/a_ref = y-component of jet velocity
+c           5) w/a_ref = z-component of jet velocity
+c
+c           6) t_on 
+c              t_on >= 0: turn on jet at t_on 
+c              t_on < 0: turn off jet at abs(t_on)
+c           7) t_99 = time of the pulsed jet achieving its maximum value
+c              t_99 < 0: linear blending function
+c              t_99 > 0: cosine blending function 
 c
 c***********************************************************************
 c
@@ -130,7 +96,6 @@ c
       common /sklton/ isklton
       common /wallfun/ iwf(3)
       common /unst/ time,cfltau,ntstep,ita,iunst,cfltau0,cfltauMax
-      common /walljet/ turwj(7)
       common /ivals/ p0,rho0,c0,u0,v0,w0,et0,h0,pt0,rhot0,qiv(5),
      .        tur10(7)
 
@@ -166,6 +131,8 @@ c
 c     this bc makes use of only one plane of data    
 c
       ip    = 1
+      itrflg1 = 0
+      if (real(bcdata(1,1,ip,8)).gt.-1.e10) itrflg1 = 1
 c
 c            * * * * * * * * * * * * * * * * * * * * * *
 c            * standard boundary condition bctype=2036 *
@@ -182,17 +149,15 @@ c
       do 300 k=ksta,kend1
       kk = k-ksta+1
 c     read data
-      cq0           = bcdata(kk,ii,ip,2)
-      cqa           = bcdata(kk,ii,ip,3)
-      sjetx         = bcdata(kk,ii,ip,4)
-      sjety         = bcdata(kk,ii,ip,5)
-      sjetz         = bcdata(kk,ii,ip,6)
-      t_cyc         = bcdata(kk,ii,ip,7)
-      t_s99         = bcdata(kk,ii,ip,8)
-      d_cyc         = bcdata(kk,ii,ip,9)
-
-      call bc2036_check(t_cyc,t_s99,d_cyc,nou,bou,ibufdim,nbuf)
-      
+      twtype  = bcdata(kk,ii,ip,1)
+      rhojet  = bcdata(kk,ii,ip,2)
+      ujet    = bcdata(kk,ii,ip,3)
+      vjet    = bcdata(kk,ii,ip,4)
+      wjet    = bcdata(kk,ii,ip,5)
+      t_on    = bcdata(kk,ii,ip,6)
+      t_99    = bcdata(kk,ii,ip,7)
+      vmag    = sqrt(ujet*ujet+vjet*vjet+wjet*wjet)
+      rvel    = vel2036(time,t_on,t_99)
 c
 c     surface velocities
 c
@@ -210,33 +175,9 @@ c
       end if
 
 c
-c     compute total (steady and unsteady) surface jet
-c
-      cqt = cq2036(time, cq0, cqa, t_cyc, t_s99, d_cyc)
-
-c     compute direction cosines for surface jet
-c
-      sjet   = sqrt(sjetx*sjetx+sjety*sjety+sjetz*sjetz)
-      snx    = sj(1,k,i,1)
-      sny    = sj(1,k,i,2)
-      snz    = sj(1,k,i,3)
-      if (sjet.ne.0.0) then
-        sjetx = sjetx/sjet
-        sjety = sjety/sjet
-        sjetz = sjetz/sjet
-      else
-        sjetx = snx 
-        sjety = sny 
-        sjetz = snz 
-      endif
-
-c     wall normal component
-c     > 0 means inflow
-      cqn = cqt*(sjetx*snx+sjety*sny+sjetz*snz)
-c
-      pb  = q(1,k,i,5)
-      c2  = gamma*q(1,k,i,5)/q(1,k,i,1)
-      if (real(cqn).lt.1e-12) then ! without jet
+      if (real(rvel*vmag).lt.1e-20) then
+        pb  = q(1,k,i,5)
+        c2  = gamma*q(1,k,i,5)/q(1,k,i,1)
         dpb = q(2,k,i,5)-q(1,k,i,5)
         pb  = pb - dpb/2.0
         if (real(pb).le.0.0) pb = q(1,k,i,5)
@@ -251,43 +192,14 @@ c
           xm2 = xm2/c2
           c2  = c2*(1.+0.5*gm1*xm2)
         end if
-      endif
-c     add directional components of surface jet
+        qj0(k,i,1,1) = gamma*pb/c2
+        qj0(k,i,2,1) = uub
+        qj0(k,i,3,1) = vvb
+        qj0(k,i,4,1) = wwb
+        qj0(k,i,5,1) = pb
+        bcj(k,i,1)   = 1.0
 c
-      uub = uub + sjetx*xmach*cqt*c2/(gamma*pb)
-      vvb = vvb + sjety*xmach*cqt*c2/(gamma*pb)
-      wwb = wwb + sjetz*xmach*cqt*c2/(gamma*pb)
-c
-      qj0(k,i,1,1) = gamma*pb/c2
-      qj0(k,i,2,1) = uub
-      qj0(k,i,3,1) = vvb
-      qj0(k,i,4,1) = wwb
-      qj0(k,i,5,1) = pb
-      bcj(k,i,1)   = 1.0
-c
-c     f23 = 0.0  -  2-point extrapolation
-c           1.0  -  3-point extrapolation
-c
-      f23 = 0.0
-c
-      j2 = min(2,jdim1)
-      if (j2.eq.1) f23 = 0.0
-c
-      z1  =   2.0 +1.5*f23
-      z2  =       -0.5*f23   
-      z3  = -(2.0 +    f23)
-c
-      qj0(k,i,1,2) = z1*q(1,k,i,1) + z2*q(j2,k,i,1) + z3*qj0(k,i,1,1)
-      qj0(k,i,2,2) = z1*q(1,k,i,2) + z2*q(j2,k,i,2) + z3*qj0(k,i,2,1)
-      qj0(k,i,3,2) = z1*q(1,k,i,3) + z2*q(j2,k,i,3) + z3*qj0(k,i,3,1)
-      qj0(k,i,4,2) = z1*q(1,k,i,4) + z2*q(j2,k,i,4) + z3*qj0(k,i,4,1)
-      qj0(k,i,5,2) = z1*q(1,k,i,5) + z2*q(j2,k,i,5) + z3*qj0(k,i,5,1)
-c 
-c     Turbulence
-c     only need to do advanced model turbulence B.C.s on finest grid
-c
-      if (ivmx.ge.2.and.level.ge.lglobal.and.ntime.ne.0) then
-        if (abs(cqt).lt.1e-12) then
+        if (ivmx.ge.2.and.level.ge.lglobal.and.ntime.ne.0) then
           vj0(k,i,1,1) = 0.
           vj0(k,i,1,2) = 0.
           if (ivmx.eq.5) then 
@@ -311,15 +223,50 @@ c
             tj0(k,i,1,2) = 2.*tj0(k,i,1,1)-tursav(1,k,i,1)
             tj0(k,i,2,2) = 2.*tj0(k,i,2,1)-tursav(1,k,i,2)
           endif
-        else ! use free stream val or user specified via turwj
+        endif
+      else
+        pb  = q(1,k,i,5)
+        dpb = q(2,k,i,5)-q(1,k,i,5)
+        pb  = pb - dpb/2.0
+        if (real(pb).le.0.0) pb = q(1,k,i,5)
+        uub = uub + ujet*rvel
+        vvb = vvb + vjet*rvel
+        wwb = wwb + wjet*rvel
+        qj0(k,i,1,1) = rhojet
+        qj0(k,i,2,1) = uub
+        qj0(k,i,3,1) = vvb
+        qj0(k,i,4,1) = wwb
+        qj0(k,i,5,1) = pb
+        bcj(k,i,1)   = 1.0
+c
+        if (ivmx.ge.2.and.level.ge.lglobal.and.ntime.ne.0) then
           vj0(k,i,1,1) = vist3d(1,k,i)
-          vj0(k,i,1,0) = 0.0
+          vj0(k,i,1,2) = 0.
           do l=1,nummem
-            tj0(k,i,l,1) = ccmax(tur10(l), turwj(l))
-            tj0(k,i,l,2) = tj0(k,i,l,1)
+            t11 = (1-itrflg1)*tur10(l) +itrflg1*bcdata(kk,ii,ip,7+l)
+            tj0(k,i,l,1) = t11
+            tj0(k,i,l,2) = t11
           enddo
         endif
       endif
+c
+c     f23 = 0.0  -  2-point extrapolation
+c           1.0  -  3-point extrapolation
+c
+      f23 = 0.0
+c
+      j2 = min(2,jdim1)
+      if (j2.eq.1) f23 = 0.0
+c
+      z1  =   2.0 +1.5*f23
+      z2  =       -0.5*f23   
+      z3  = -(2.0 +    f23)
+c
+      qj0(k,i,1,2) = z1*q(1,k,i,1) + z2*q(j2,k,i,1) + z3*qj0(k,i,1,1)
+      qj0(k,i,2,2) = z1*q(1,k,i,2) + z2*q(j2,k,i,2) + z3*qj0(k,i,2,1)
+      qj0(k,i,3,2) = z1*q(1,k,i,3) + z2*q(j2,k,i,3) + z3*qj0(k,i,3,1)
+      qj0(k,i,4,2) = z1*q(1,k,i,4) + z2*q(j2,k,i,4) + z3*qj0(k,i,4,1)
+      qj0(k,i,5,2) = z1*q(1,k,i,5) + z2*q(j2,k,i,5) + z3*qj0(k,i,5,1)
   300 continue
   400 continue
 c
@@ -336,16 +283,15 @@ c
       do 700 k=ksta,kend1
       kk = k-ksta+1
 c     read data
-      cq0           = bcdata(kk,ii,ip,2)
-      cqa           = bcdata(kk,ii,ip,3)
-      sjetx         = bcdata(kk,ii,ip,4)
-      sjety         = bcdata(kk,ii,ip,5)
-      sjetz         = bcdata(kk,ii,ip,6)
-      t_cyc         = bcdata(kk,ii,ip,7)
-      t_s99         = bcdata(kk,ii,ip,8)
-      d_cyc         = bcdata(kk,ii,ip,9)
-      
-      call bc2036_check(t_cyc,t_s99,d_cyc,nou,bou,ibufdim,nbuf)
+      twtype  = bcdata(kk,ii,ip,1)
+      rhojet  = bcdata(kk,ii,ip,2)
+      ujet    = bcdata(kk,ii,ip,3)
+      vjet    = bcdata(kk,ii,ip,4)
+      wjet    = bcdata(kk,ii,ip,5)
+      t_on    = bcdata(kk,ii,ip,6)
+      t_99    = bcdata(kk,ii,ip,7)
+      vmag    = sqrt(ujet*ujet+vjet*vjet+wjet*wjet)
+      rvel    = vel2036(time,t_on,t_99)
 
 c
 c     surface velocities
@@ -364,32 +310,9 @@ c
       end if
 
 c
-c     compute total (steady and unsteady) surface jet
-c
-      cqt = cq2036(time, cq0, cqa, t_cyc, t_s99, d_cyc)
-
-c     compute direction cosines for surface jet
-c
-      sjet = sqrt(sjetx*sjetx+sjety*sjety+sjetz*sjetz)
-      snx  = -sj(jdim,k,i,1)
-      sny  = -sj(jdim,k,i,2)
-      snz  = -sj(jdim,k,i,3)
-      if (sjet.ne.0.0) then
-        sjetx = sjetx/sjet
-        sjety = sjety/sjet
-        sjetz = sjetz/sjet
-      else
-        sjetx = snx
-        sjety = sny
-        sjetz = snz
-      endif
-c     wall normal component
-c     > 0 means inflow
-      cqn = cqt*(sjetx*snx+sjety*sny+sjetz*snz)
-c
-      pb  = q(jdim1,k,i,5)
-      c2  = gamma*q(jdim1,k,i,5)/q(jdim1,k,i,1)
-      if (real(cqn).lt.1e-12) then ! without jet
+      if (real(rvel*vmag).lt.1e-20) then ! without jet
+        pb  = q(jdim1,k,i,5)
+        c2  = gamma*q(jdim1,k,i,5)/q(jdim1,k,i,1)
         dpb = q(jdim1,k,i,5)-q(jdim1-1,k,i,5)
         pb  = pb + dpb/2.0
         if (real(pb).le.0.0)  pb = q(jdim1,k,i,5)
@@ -404,44 +327,14 @@ c
           xm2 = xm2/c2
           c2  = c2*(1.+0.5*gm1*xm2)
         end if
-      endif
-
-c     add directional components of surface jet
+        qj0(k,i,1,3) = gamma*pb/c2
+        qj0(k,i,2,3) = uub
+        qj0(k,i,3,3) = vvb
+        qj0(k,i,4,3) = wwb
+        qj0(k,i,5,3) = pb
+        bcj(k,i,2)   = 1.0
 c
-      uub = uub + sjetx*xmach*cqt*c2/(gamma*pb)
-      vvb = vvb + sjety*xmach*cqt*c2/(gamma*pb)
-      wwb = wwb + sjetz*xmach*cqt*c2/(gamma*pb)
-c
-      qj0(k,i,1,3) = gamma*pb/c2
-      qj0(k,i,2,3) = uub
-      qj0(k,i,3,3) = vvb
-      qj0(k,i,4,3) = wwb
-      qj0(k,i,5,3) = pb
-      bcj(k,i,2)   = 1.0
-c
-c     f23 = 0.0  -  2-point extrapolation
-c           1.0  -  3-point extrapolation
-c
-      f23 = 0.0
-c
-      j2 = max(1,jdim-2)
-      if (j2.eq.1) f23 = 0.0
-c
-      z1  =  -2.0 -1.5*f23
-      z2  =       +0.5*f23   
-      z3  = +(2.0 +    f23)
-c
-      qj0(k,i,1,4) = z1*q(jdim1,k,i,1)+z2*q(j2,k,i,1)+z3*qj0(k,i,1,3)
-      qj0(k,i,2,4) = z1*q(jdim1,k,i,2)+z2*q(j2,k,i,2)+z3*qj0(k,i,2,3)
-      qj0(k,i,3,4) = z1*q(jdim1,k,i,3)+z2*q(j2,k,i,3)+z3*qj0(k,i,3,3)
-      qj0(k,i,4,4) = z1*q(jdim1,k,i,4)+z2*q(j2,k,i,4)+z3*qj0(k,i,4,3)
-      qj0(k,i,5,4) = z1*q(jdim1,k,i,5)+z2*q(j2,k,i,5)+z3*qj0(k,i,5,3)
-c 
-c     Turbulence
-c     only need to do advanced model turbulence B.C.s on finest grid
-c
-      if (ivmx.ge.2.and.level.ge.lglobal.and.ntime.ne.0) then 
-        if (abs(cqt).lt.1e-12) then
+        if (ivmx.ge.2.and.level.ge.lglobal.and.ntime.ne.0) then
           vj0(k,i,1,3) = 0.
           vj0(k,i,1,4) = 0.
           if (ivmx.eq.5) then 
@@ -465,15 +358,50 @@ c
             tj0(k,i,1,4) = 2.*tj0(k,i,1,3)-tursav(jdim-1,k,i,1)
             tj0(k,i,2,4) = 2.*tj0(k,i,2,3)-tursav(jdim-1,k,i,2)
           endif
-        else
+        endif
+      else
+        pb  = q(jdim1,k,i,5)
+        dpb = q(jdim1,k,i,5)-q(jdim1-1,k,i,5)
+        pb  = pb + dpb/2.0
+        if (real(pb).le.0.0)  pb = q(jdim1,k,i,5)
+        uub = uub + ujet*rvel
+        vvb = vvb + vjet*rvel
+        wwb = wwb + wjet*rvel
+        qj0(k,i,1,3) = rhojet
+        qj0(k,i,2,3) = uub
+        qj0(k,i,3,3) = vvb
+        qj0(k,i,4,3) = wwb
+        qj0(k,i,5,3) = pb
+        bcj(k,i,2)   = 1.0
+c
+        if (ivmx.ge.2.and.level.ge.lglobal.and.ntime.ne.0) then 
           vj0(k,i,1,3) = vist3d(jdim-1,k,i)
           vj0(k,i,1,4) = 0.
           do l=1,nummem
-            tj0(k,i,l,3) = ccmax(tur10(l), turwj(l))
-            tj0(k,i,l,4) = tj0(k,i,l,3)
+            t11 = (1-itrflg1)*tur10(l) +itrflg1*bcdata(kk,ii,ip,7+l)
+            tj0(k,i,l,3) = t11
+            tj0(k,i,l,4) = t11
           enddo
         endif
       endif
+c
+c       f23 = 0.0  -  2-point extrapolation
+c             1.0  -  3-point extrapolation
+c
+      f23 = 0.0
+c
+      j2 = max(1,jdim-2)
+      if (j2.eq.1) f23 = 0.0
+c
+      z1  =  -2.0 -1.5*f23
+      z2  =       +0.5*f23   
+      z3  = +(2.0 +    f23)
+c
+      qj0(k,i,1,4) = z1*q(jdim1,k,i,1)+z2*q(j2,k,i,1)+z3*qj0(k,i,1,3)
+      qj0(k,i,2,4) = z1*q(jdim1,k,i,2)+z2*q(j2,k,i,2)+z3*qj0(k,i,2,3)
+      qj0(k,i,3,4) = z1*q(jdim1,k,i,3)+z2*q(j2,k,i,3)+z3*qj0(k,i,3,3)
+      qj0(k,i,4,4) = z1*q(jdim1,k,i,4)+z2*q(j2,k,i,4)+z3*qj0(k,i,4,3)
+      qj0(k,i,5,4) = z1*q(jdim1,k,i,5)+z2*q(j2,k,i,5)+z3*qj0(k,i,5,3)
   700 continue
   800 continue
 
@@ -491,16 +419,15 @@ c
       do 1100 j=jsta,jend1
       jj = j-jsta+1
 c     read data
-      cq0           = bcdata(jj,ii,ip,2)
-      cqa           = bcdata(jj,ii,ip,3)
-      sjetx         = bcdata(jj,ii,ip,4)
-      sjety         = bcdata(jj,ii,ip,5)
-      sjetz         = bcdata(jj,ii,ip,6)
-      t_cyc         = bcdata(jj,ii,ip,7)
-      t_s99         = bcdata(jj,ii,ip,8)
-      d_cyc         = bcdata(jj,ii,ip,9)
-      
-      call bc2036_check(t_cyc,t_s99,d_cyc,nou,bou,ibufdim,nbuf)
+      twtype  = bcdata(jj,ii,ip,1)
+      rhojet  = bcdata(jj,ii,ip,2)
+      ujet    = bcdata(jj,ii,ip,3)
+      vjet    = bcdata(jj,ii,ip,4)
+      wjet    = bcdata(jj,ii,ip,5)
+      t_on    = bcdata(jj,ii,ip,6)
+      t_99    = bcdata(jj,ii,ip,7)
+      vmag    = sqrt(ujet*ujet+vjet*vjet+wjet*wjet)
+      rvel    = vel2036(time,t_on,t_99)
 
 c
 c     surface velocities
@@ -519,33 +446,9 @@ c
       end if
 
 c
-c     compute total (steady and unsteady) surface jet
-c
-      cqt = cq2036(time, cq0, cqa, t_cyc, t_s99, d_cyc)
-
-c     compute direction cosines for surface jet
-c
-      sjet   = sqrt(sjetx*sjetx+sjety*sjety+sjetz*sjetz)
-      snx    = sk(j,1,i,1)
-      sny    = sk(j,1,i,2)
-      snz    = sk(j,1,i,3)
-      if (sjet.ne.0.0) then
-        sjetx = sjetx/sjet
-        sjety = sjety/sjet
-        sjetz = sjetz/sjet
-      else
-        sjetx = snx
-        sjety = sny
-        sjetz = snz
-      endif
-
-c     wall normal component
-c     > 0 means inflow
-      cqn = cqt*(sjetx*snx+sjety*sny+sjetz*snz)
-
-      pb            = q(j,1,i,5)
-      c2            = gamma*q(j,1,i,5)/q(j,1,i,1)
-      if (real(cqn).lt.1e-12) then ! without jet
+      if (real(rvel*vmag).lt.1e-20) then
+        pb            = q(j,1,i,5)
+        c2            = gamma*q(j,1,i,5)/q(j,1,i,1)
         dpb           = q(j,2,i,5)-q(j,1,i,5)
         pb            = pb - dpb/2.0
         if (real(pb).le.0.0)  pb = q(j,1,i,5)
@@ -564,43 +467,13 @@ c     > 0 means inflow
           xm2 = xm2/c2
           c2  = c2*(1.+0.5*gm1*xm2)
         end if
-      endif
-c     add directional components of surface jet
-c
-      uub = uub + sjetx*xmach*cqt*c2/(gamma*pb)
-      vvb = vvb + sjety*xmach*cqt*c2/(gamma*pb)
-      wwb = wwb + sjetz*xmach*cqt*c2/(gamma*pb)
-c
-      qk0(j,i,1,1) = gamma*pb/c2
-      qk0(j,i,2,1) = uub
-      qk0(j,i,3,1) = vvb
-      qk0(j,i,4,1) = wwb
-      qk0(j,i,5,1) = pb
-      bck(j,i,1)   = 1.0
-c
-c     f23 = 0.0  -  2-point extrapolation
-c           1.0  -  3-point extrapolation
-c
-      f23 = 0.0
-c
-      k2 = min(2,kdim1)
-      if (k2.eq.1) f23 = 0.0
-c
-      z1  =   2.0 +1.5*f23
-      z2  =       -0.5*f23   
-      z3  = -(2.0 +    f23)
-c
-      qk0(j,i,1,2) = z1*q(j,1,i,1) + z2*q(j,k2,i,1) + z3*qk0(j,i,1,1)
-      qk0(j,i,2,2) = z1*q(j,1,i,2) + z2*q(j,k2,i,2) + z3*qk0(j,i,2,1)
-      qk0(j,i,3,2) = z1*q(j,1,i,3) + z2*q(j,k2,i,3) + z3*qk0(j,i,3,1)
-      qk0(j,i,4,2) = z1*q(j,1,i,4) + z2*q(j,k2,i,4) + z3*qk0(j,i,4,1)
-      qk0(j,i,5,2) = z1*q(j,1,i,5) + z2*q(j,k2,i,5) + z3*qk0(j,i,5,1)
-c 
-c     Turbulence
-c     only need to do advanced model turbulence B.C.s on finest grid
-c
-      if (livmx.ge.2.and.level.ge.lglobal.and.ntime.ne.0) then 
-        if (abs(cqt).lt.1e-12) then
+        qk0(j,i,1,1) = gamma*pb/c2
+        qk0(j,i,2,1) = uub
+        qk0(j,i,3,1) = vvb
+        qk0(j,i,4,1) = wwb
+        qk0(j,i,5,1) = pb
+        bck(j,i,1)   = 1.0
+        if (livmx.ge.2.and.level.ge.lglobal.and.ntime.ne.0) then 
           vk0(j,i,1,1) = 0.
           vk0(j,i,1,2) = 0.
           if (ivmx.eq.5) then 
@@ -624,15 +497,51 @@ c
             tk0(j,i,1,2) = 2.*tk0(j,i,1,1)-tursav(j,1,i,1)
             tk0(j,i,2,2) = 2.*tk0(j,i,2,1)-tursav(j,1,i,2)
           endif
-        else
+        endif
+      else
+        pb  = q(j,1,i,5)
+        dpb = q(j,2,i,5)-q(j,1,i,5)
+        pb  = pb - dpb/2.0
+        if (real(pb).le.0.0) pb = q(j,1,i,5)
+        uub = uub + ujet*rvel
+        vvb = vvb + vjet*rvel
+        wwb = wwb + wjet*rvel
+        qk0(j,i,1,1) = rhojet
+        qk0(j,i,2,1) = uub
+        qk0(j,i,3,1) = vvb
+        qk0(j,i,4,1) = wwb
+        qk0(j,i,5,1) = pb
+        bck(j,i,1)   = 1.0
+c
+        if (livmx.ge.2.and.level.ge.lglobal.and.ntime.ne.0) then 
           vk0(j,i,1,1) = vist3d(j,1,i)
           vk0(j,i,1,2) = 0.
           do l=1,nummem
-            tk0(k,i,l,1) = ccmax(tur10(l), turwj(l))
-            tk0(k,i,l,2) = tk0(k,i,l,1)
+            t11 = (1-itrflg1)*tur10(l) +itrflg1*bcdata(jj,ii,ip,7+l)
+            tk0(k,i,l,1) = t11
+            tk0(k,i,l,2) = t11
           enddo
         endif
       endif
+c
+c     f23 = 0.0  -  2-point extrapolation
+c           1.0  -  3-point extrapolation
+c
+      f23 = 0.0
+c
+      k2 = min(2,kdim1)
+      if (k2.eq.1) f23 = 0.0
+c
+      z1  =   2.0 +1.5*f23
+      z2  =       -0.5*f23   
+      z3  = -(2.0 +    f23)
+c
+      qk0(j,i,1,2) = z1*q(j,1,i,1) + z2*q(j,k2,i,1) + z3*qk0(j,i,1,1)
+      qk0(j,i,2,2) = z1*q(j,1,i,2) + z2*q(j,k2,i,2) + z3*qk0(j,i,2,1)
+      qk0(j,i,3,2) = z1*q(j,1,i,3) + z2*q(j,k2,i,3) + z3*qk0(j,i,3,1)
+      qk0(j,i,4,2) = z1*q(j,1,i,4) + z2*q(j,k2,i,4) + z3*qk0(j,i,4,1)
+      qk0(j,i,5,2) = z1*q(j,1,i,5) + z2*q(j,k2,i,5) + z3*qk0(j,i,5,1)
+        
  1100 continue
  1200 continue
 c
@@ -649,16 +558,15 @@ c
       do 1500 j=jsta,jend1
       jj = j-jsta+1
 c     read data
-      cq0           = bcdata(jj,ii,ip,2)
-      cqa           = bcdata(jj,ii,ip,3)
-      sjetx         = bcdata(jj,ii,ip,4)
-      sjety         = bcdata(jj,ii,ip,5)
-      sjetz         = bcdata(jj,ii,ip,6)
-      t_cyc         = bcdata(jj,ii,ip,7)
-      t_s99         = bcdata(jj,ii,ip,8)
-      d_cyc         = bcdata(jj,ii,ip,9)
-      
-      call bc2036_check(t_cyc,t_s99,d_cyc,nou,bou,ibufdim,nbuf)
+      twtype  = bcdata(jj,ii,ip,1)
+      rhojet  = bcdata(jj,ii,ip,2)
+      ujet    = bcdata(jj,ii,ip,3)
+      vjet    = bcdata(jj,ii,ip,4)
+      wjet    = bcdata(jj,ii,ip,5)
+      t_on    = bcdata(jj,ii,ip,6)
+      t_99    = bcdata(jj,ii,ip,7)
+      vmag    = sqrt(ujet*ujet+vjet*vjet+wjet*wjet)
+      rvel    = vel2036(time,t_on,t_99)
 
 c
 c     surface velocities
@@ -676,36 +584,11 @@ c
       wwb = xtbk(j,i,3,2)
       end if
 
-c
-c     compute total (steady and unsteady) surface jet
-c
-      cqt = cq2036(time, cq0, cqa, t_cyc, t_s99, d_cyc)
-
-c     compute direction cosines for surface jet
-c
-      sjet   = sqrt(sjetx*sjetx+sjety*sjety+sjetz*sjetz)
-      snx    = -sk(j,kdim,i,1)
-      sny    = -sk(j,kdim,i,2)
-      snz    = -sk(j,kdim,i,3)
-      if (sjet.ne.0.0) then
-        sjetx = sjetx/sjet
-        sjety = sjety/sjet
-        sjetz = sjetz/sjet
-      else
-        sjetx = snx
-        sjety = sny
-        sjetz = snz
-      endif
-      
-c     wall normal component
-c     > 0 means inflow
-      cqn = cqt*(sjetx*snx+sjety*sny+sjetz*snz)
-      pb = q(j,kdim1,i,5)
-      c2 = gamma*q(j,kdim1,i,5)/q(j,kdim1,i,1)
-      
-      if (real(cqn).lt.1e-12) then ! without jet
-        dpb           = q(j,kdim1,i,5)-q(j,kdim1-1,i,5)
-        pb            = pb + dpb/2.0
+      if (real(rvel*vmag).lt.1e-20) then
+        pb  = q(j,kdim1,i,5)
+        c2  = gamma*q(j,kdim1,i,5)/q(j,kdim1,i,1)
+        dpb = q(j,kdim1,i,5)-q(j,kdim1-1,i,5)
+        pb  = pb + dpb/2.0
         if (real(pb).le.0.0)  pb = q(j,kdim1,i,5)
         if (real(bcdata(jj,ii,ip,1)) .gt. 0.) then
           c2  = bcdata(jj,ii,ip,1)
@@ -722,43 +605,14 @@ c     > 0 means inflow
           xm2 = xm2/c2
           c2  = c2*(1.+0.5*gm1*xm2)
         end if
-      endif
-c     add directional components of surface jet
+        qk0(j,i,1,3) = gamma*pb/c2
+        qk0(j,i,2,3) = uub
+        qk0(j,i,3,3) = vvb
+        qk0(j,i,4,3) = wwb
+        qk0(j,i,5,3) = pb
+        bck(j,i,2)   = 1.0
 c
-      uub = uub + sjetx*xmach*cqt*c2/(gamma*pb)
-      vvb = vvb + sjety*xmach*cqt*c2/(gamma*pb)
-      wwb = wwb + sjetz*xmach*cqt*c2/(gamma*pb)
-c
-      qk0(j,i,1,3) = gamma*pb/c2
-      qk0(j,i,2,3) = uub
-      qk0(j,i,3,3) = vvb
-      qk0(j,i,4,3) = wwb
-      qk0(j,i,5,3) = pb
-      bck(j,i,2)   = 1.0
-c
-c     f23 = 0.0  -  2-point extrapolation
-c           1.0  -  3-point extrapolation
-c
-      f23 = 0.0
-c
-      k2 = max(1,kdim-2)
-      if (k2.eq.1) f23 = 0.0
-c
-      z1  =  -2.0 -1.5*f23
-      z2  =       +0.5*f23   
-      z3  = +(2.0 +    f23)
-c
-      qk0(j,i,1,4) = z1*q(j,kdim1,i,1)+z2*q(j,k2,i,1)+z3*qk0(j,i,1,3)
-      qk0(j,i,2,4) = z1*q(j,kdim1,i,2)+z2*q(j,k2,i,2)+z3*qk0(j,i,2,3)
-      qk0(j,i,3,4) = z1*q(j,kdim1,i,3)+z2*q(j,k2,i,3)+z3*qk0(j,i,3,3)
-      qk0(j,i,4,4) = z1*q(j,kdim1,i,4)+z2*q(j,k2,i,4)+z3*qk0(j,i,4,3)
-      qk0(j,i,5,4) = z1*q(j,kdim1,i,5)+z2*q(j,k2,i,5)+z3*qk0(j,i,5,3)
-c 
-c     Turbulence
-c     only need to do advanced model turbulence B.C.s on finest grid
-c
-      if (ivmx.ge.2.and.level.ge.lglobal.and.ntime.ne.0) then 
-        if (abs(cqt).lt.1e-12) then
+        if (ivmx.ge.2.and.level.ge.lglobal.and.ntime.ne.0) then 
           vk0(j,i,1,3) = 0.
           vk0(j,i,1,4) = 0.
           if (ivmx.eq.5) then 
@@ -782,15 +636,50 @@ c
             tk0(j,i,1,4) = 2.*tk0(j,i,1,3)-tursav(j,kdim-1,i,1)
             tk0(j,i,2,4) = 2.*tk0(j,i,2,3)-tursav(j,kdim-1,i,2)
           endif
-        else
+        endif
+      else
+        pb  = q(j,kdim1,i,5)
+        dpb = q(j,kdim1,i,5)-q(j,kdim1-1,i,5)
+        pb  = pb + dpb/2.0
+        if (real(pb).le.0.0)  pb = q(j,kdim1,i,5)
+        uub = uub + ujet*rvel
+        vvb = vvb + vjet*rvel
+        wwb = wwb + wjet*rvel
+        qk0(j,i,1,3) = rhojet
+        qk0(j,i,2,3) = uub
+        qk0(j,i,3,3) = vvb
+        qk0(j,i,4,3) = wwb
+        qk0(j,i,5,3) = pb
+        bck(j,i,2)   = 1.0
+c
+        if (ivmx.ge.2.and.level.ge.lglobal.and.ntime.ne.0) then 
           vk0(j,i,1,3) = vist3d(j,kdim-1,i)
           vk0(j,i,1,4) = 0.0
           do l=1,nummem
-            tk0(j,i,l,3) = ccmax(tur10(l), turwj(l))
-            tk0(j,i,l,4) = tk0(j,i,l,3)
+            t11 = (1-itrflg1)*tur10(l) +itrflg1*bcdata(jj,ii,ip,7+l)
+            tk0(j,i,l,3) = t11
+            tk0(j,i,l,4) = t11
           enddo
         endif
       endif
+c
+c     f23 = 0.0  -  2-point extrapolation
+c           1.0  -  3-point extrapolation
+c
+      f23 = 0.0
+c
+      k2 = max(1,kdim-2)
+      if (k2.eq.1) f23 = 0.0
+c
+      z1  =  -2.0 -1.5*f23
+      z2  =       +0.5*f23   
+      z3  = +(2.0 +    f23)
+c
+      qk0(j,i,1,4) = z1*q(j,kdim1,i,1)+z2*q(j,k2,i,1)+z3*qk0(j,i,1,3)
+      qk0(j,i,2,4) = z1*q(j,kdim1,i,2)+z2*q(j,k2,i,2)+z3*qk0(j,i,2,3)
+      qk0(j,i,3,4) = z1*q(j,kdim1,i,3)+z2*q(j,k2,i,3)+z3*qk0(j,i,3,3)
+      qk0(j,i,4,4) = z1*q(j,kdim1,i,4)+z2*q(j,k2,i,4)+z3*qk0(j,i,4,3)
+      qk0(j,i,5,4) = z1*q(j,kdim1,i,5)+z2*q(j,k2,i,5)+z3*qk0(j,i,5,3)
  1500 continue
  1600 continue
 c
@@ -807,16 +696,15 @@ c
       do 1900 j=jsta,jend1
       jj = j-jsta+1
 c     read data
-      cq0           = bcdata(jj,kk,ip,2)
-      cqa           = bcdata(jj,kk,ip,3)
-      sjetx         = bcdata(jj,kk,ip,4)
-      sjety         = bcdata(jj,kk,ip,5)
-      sjetz         = bcdata(jj,kk,ip,6)
-      t_cyc         = bcdata(jj,kk,ip,7)
-      t_s99         = bcdata(jj,kk,ip,8)
-      d_cyc         = bcdata(jj,kk,ip,9)
-      
-      call bc2036_check(t_cyc,t_s99,d_cyc,nou,bou,ibufdim,nbuf)
+      twtype  = bcdata(jj,kk,ip,1)
+      rhojet  = bcdata(jj,kk,ip,2)
+      ujet    = bcdata(jj,kk,ip,3)
+      vjet    = bcdata(jj,kk,ip,4)
+      wjet    = bcdata(jj,kk,ip,5)
+      t_on    = bcdata(jj,kk,ip,6)
+      t_99    = bcdata(jj,kk,ip,7)
+      vmag    = sqrt(ujet*ujet+vjet*vjet+wjet*wjet)
+      rvel    = vel2036(time,t_on,t_99)
 
 c
 c     surface velocities
@@ -834,35 +722,11 @@ c
       wwb = xtbi(j,k,3,1)
       end if
 
-c
-c     compute total (steady and unsteady) surface jet
-c
-      cqt = cq2036(time, cq0, cqa, t_cyc, t_s99, d_cyc)
-
-c     compute direction cosines for surface jet
-c
-      sjet   = sqrt(sjetx*sjetx+sjety*sjety+sjetz*sjetz)
-      snx    = si(j,k,1,1)
-      sny    = si(j,k,1,2)
-      snz    = si(j,k,1,3)
-      if (sjet.ne.0.0) then
-        sjetx = sjetx/sjet
-        sjety = sjety/sjet
-        sjetz = sjetz/sjet
-      else
-        sjetx = snx
-        sjety = sny
-        sjetz = snz
-      endif
-c     wall normal component
-c     > 0 means inflow
-      cqn = cqt*(sjetx*snx+sjety*sny+sjetz*snz)
-      pb            = q(j,k,1,5)
-      c2            = gamma*q(j,k,1,5)/q(j,k,1,1)
-      
-      if (real(cqn).lt.1e-12) then ! without jet
-        dpb           = q(j,k,2,5)-q(j,k,1,5)
-        pb            = pb - dpb/2.0
+      if (real(rvel*vmag).lt.1e-20) then
+        pb  = q(j,k,1,5)
+        c2  = gamma*q(j,k,1,5)/q(j,k,1,1)
+        dpb = q(j,k,2,5)-q(j,k,1,5)
+        pb  = pb - dpb/2.0
         if (real(pb).le.0.0)  pb = q(j,k,1,5)
         if (real(bcdata(jj,kk,ip,1)) .gt. 0.) then
           c2  = bcdata(jj,kk,ip,1)
@@ -879,44 +743,14 @@ c     > 0 means inflow
           xm2 = xm2/c2
           c2  = c2*(1.+0.5*gm1*xm2)
         end if
-      end if
-
-c     add directional components of surface jet
+        qi0(j,k,1,1) = gamma*pb/c2
+        qi0(j,k,2,1) = uub
+        qi0(j,k,3,1) = vvb
+        qi0(j,k,4,1) = wwb
+        qi0(j,k,5,1) = pb
+        bci(j,k,1)   = 1.0
 c
-      uub = uub + sjetx*xmach*cqt*c2/(gamma*pb)
-      vvb = vvb + sjety*xmach*cqt*c2/(gamma*pb)
-      wwb = wwb + sjetz*xmach*cqt*c2/(gamma*pb)
-c
-      qi0(j,k,1,1) = gamma*pb/c2
-      qi0(j,k,2,1) = uub
-      qi0(j,k,3,1) = vvb
-      qi0(j,k,4,1) = wwb
-      qi0(j,k,5,1) = pb
-      bci(j,k,1)   = 1.0
-c
-c     f23 = 0.0  -  2-point extrapolation
-c           1.0  -  3-point extrapolation
-c
-      f23 = 0.0
-c
-      i2 = min(2,idim1)
-      if (i2.eq.1) f23 = 0.0
-c
-      z1 =   2.0 +1.5*f23
-      z2 =       -0.5*f23   
-      z3 = -(2.0 +    f23)
-c
-      qi0(j,k,1,2) = z1*q(j,k,1,1) + z2*q(j,k,i2,1) + z3*qi0(j,k,1,1)
-      qi0(j,k,2,2) = z1*q(j,k,1,2) + z2*q(j,k,i2,2) + z3*qi0(j,k,2,1)
-      qi0(j,k,3,2) = z1*q(j,k,1,3) + z2*q(j,k,i2,3) + z3*qi0(j,k,3,1)
-      qi0(j,k,4,2) = z1*q(j,k,1,4) + z2*q(j,k,i2,4) + z3*qi0(j,k,4,1)
-      qi0(j,k,5,2) = z1*q(j,k,1,5) + z2*q(j,k,i2,5) + z3*qi0(j,k,5,1)
-c 
-c     Turbulence
-c     only need to do advanced model turbulence B.C.s on finest grid
-c
-      if (ivmx.ge.2.and.level.ge.lglobal.and.ntime.ne.0) then 
-        if (abs(cqt).lt.1e-12) then
+        if (ivmx.ge.2.and.level.ge.lglobal.and.ntime.ne.0) then 
           vi0(j,k,1,1) = 0.
           vi0(j,k,1,2) = 0.
           if (ivmx.eq.5) then 
@@ -940,15 +774,50 @@ c
             ti0(j,k,1,2) = 2.*ti0(j,k,1,1)-tursav(j,k,1,1)
             ti0(j,k,2,2) = 2.*ti0(j,k,2,1)-tursav(j,k,1,2)
           endif
-        else
+        endif
+      else
+        pb  = q(j,k,1,5)
+        dpb = q(j,k,2,5)-q(j,k,1,5)
+        pb  = pb - dpb/2.0
+        if (real(pb).le.0.0)  pb = q(j,k,1,5)
+        uub = uub + ujet*rvel
+        vvb = vvb + vjet*rvel
+        wwb = wwb + wjet*rvel
+        qi0(j,k,1,1) = rhojet
+        qi0(j,k,2,1) = uub
+        qi0(j,k,3,1) = vvb
+        qi0(j,k,4,1) = wwb
+        qi0(j,k,5,1) = pb
+        bci(j,k,1)   = 1.0
+c
+        if (ivmx.ge.2.and.level.ge.lglobal.and.ntime.ne.0) then 
           vi0(j,k,1,1) = vist3d(j,k,1)
           vi0(j,k,1,2) = 0.
           do l=1,nummem
-            ti0(j,k,l,1) = ccmax(tur10(l), turwj(l))
-            ti0(j,k,l,2) = ti0(j,k,l,1)
+            t11 = (1-itrflg1)*tur10(l) +itrflg1*bcdata(jj,kk,ip,7+l)
+            ti0(j,k,l,1) = t11
+            ti0(j,k,l,2) = t11
           enddo
         endif
-      endif
+      end if
+c
+c     f23 = 0.0  -  2-point extrapolation
+c           1.0  -  3-point extrapolation
+c
+      f23 = 0.0
+c
+      i2 = min(2,idim1)
+      if (i2.eq.1) f23 = 0.0
+c
+      z1 =   2.0 +1.5*f23
+      z2 =       -0.5*f23   
+      z3 = -(2.0 +    f23)
+c
+      qi0(j,k,1,2) = z1*q(j,k,1,1) + z2*q(j,k,i2,1) + z3*qi0(j,k,1,1)
+      qi0(j,k,2,2) = z1*q(j,k,1,2) + z2*q(j,k,i2,2) + z3*qi0(j,k,2,1)
+      qi0(j,k,3,2) = z1*q(j,k,1,3) + z2*q(j,k,i2,3) + z3*qi0(j,k,3,1)
+      qi0(j,k,4,2) = z1*q(j,k,1,4) + z2*q(j,k,i2,4) + z3*qi0(j,k,4,1)
+      qi0(j,k,5,2) = z1*q(j,k,1,5) + z2*q(j,k,i2,5) + z3*qi0(j,k,5,1)
  1900 continue
  2000 continue
 c
@@ -965,17 +834,15 @@ c
       do 2300 j=jsta,jend1
       jj = j-jsta+1
 c     read data
-      cq0           = bcdata(jj,kk,ip,2)
-      cqa           = bcdata(jj,kk,ip,3)
-      sjetx         = bcdata(jj,kk,ip,4)
-      sjety         = bcdata(jj,kk,ip,5)
-      sjetz         = bcdata(jj,kk,ip,6)
-      t_cyc         = bcdata(jj,kk,ip,7)
-      t_s99         = bcdata(jj,kk,ip,8)
-      d_cyc         = bcdata(jj,kk,ip,9)
-      
-      call bc2036_check(t_cyc,t_s99,d_cyc,nou,bou,ibufdim,nbuf)
-
+      twtype  = bcdata(jj,kk,ip,1)
+      rhojet  = bcdata(jj,kk,ip,2)
+      ujet    = bcdata(jj,kk,ip,3)
+      vjet    = bcdata(jj,kk,ip,4)
+      wjet    = bcdata(jj,kk,ip,5)
+      t_on    = bcdata(jj,kk,ip,6)
+      t_99    = bcdata(jj,kk,ip,7)
+      vmag    = sqrt(ujet*ujet+vjet*vjet+wjet*wjet)
+      rvel    = vel2036(time,t_on,t_99)
 c
 c     surface velocities
 c
@@ -991,33 +858,11 @@ c
         vvb = xtbi(j,k,2,2)
         wwb = xtbi(j,k,3,2)
       end if
-
-c
-c     compute total (steady and unsteady) surface jet
-c
-      cqt = cq2036(time, cq0, cqa, t_cyc, t_s99, d_cyc)
-
-c     compute direction cosines for surface jet
-c
-      sjet = sqrt(sjetx*sjetx+sjety*sjety+sjetz*sjetz)
-      snx  = -si(j,k,idim,1)
-      sny  = -si(j,k,idim,2)
-      snz  = -si(j,k,idim,3)
-      if (sjet.ne.0.0) then
-        sjetx = sjetx/sjet
-        sjety = sjety/sjet
-        sjetz = sjetz/sjet
-      else
-        sjetx = snx
-        sjety = sny
-        sjetz = snz
-      endif
-      cqn = cqt*(sjetx*snx+sjety*sny+sjetz*snz)
-      pb  = q(j,k,idim1,5)
-      c2  = gamma*q(j,k,idim1,5)/q(j,k,idim1,1)
-      if (real(cqn).lt.1e-12) then ! without jet
-        dpb           = q(j,k,idim1,5)-q(j,k,idim1-1,5)
-        pb            = pb + dpb/2.0
+      if (real(rvel*vmag).lt.1e-20) then
+        pb  = q(j,k,idim1,5)
+        c2  = gamma*q(j,k,idim1,5)/q(j,k,idim1,1)
+        dpb = q(j,k,idim1,5)-q(j,k,idim1-1,5)
+        pb  = pb + dpb/2.0
         if (real(pb).le.0.0)  pb = q(j,k,idim1,5)
         if (real(bcdata(jj,kk,ip,1)) .gt. 0.) then
           c2  = bcdata(jj,kk,ip,1)
@@ -1034,43 +879,14 @@ c
           xm2 = xm2/c2
           c2  = c2*(1.+0.5*gm1*xm2)
         end if
-      end if
-c     add directional components of surface jet
+        qi0(j,k,1,3) = gamma*pb/c2
+        qi0(j,k,2,3) = uub
+        qi0(j,k,3,3) = vvb
+        qi0(j,k,4,3) = wwb
+        qi0(j,k,5,3) = pb
+        bci(j,k,2)   = 1.0
 c
-      uub = uub + sjetx*xmach*cqt*c2/(gamma*pb)
-      vvb = vvb + sjety*xmach*cqt*c2/(gamma*pb)
-      wwb = wwb + sjetz*xmach*cqt*c2/(gamma*pb)
-c
-      qi0(j,k,1,3) = gamma*pb/c2
-      qi0(j,k,2,3) = uub
-      qi0(j,k,3,3) = vvb
-      qi0(j,k,4,3) = wwb
-      qi0(j,k,5,3) = pb
-      bci(j,k,2)   = 1.0
-c
-c     f23 = 0.0  -  2-point extrapolation
-c           1.0  -  3-point extrapolation
-c
-      f23 = 0.0
-c
-      i2 = max(1,idim-2)
-      if (i2.eq.1) f23 = 0.0
-c
-      z1 =  -2.0 -1.5*f23
-      z2 =       +0.5*f23   
-      z3 = +(2.0 +    f23)
-c
-      qi0(j,k,1,4) = z1*q(j,k,idim1,1)+z2*q(j,k,i2,1)+z3*qi0(j,k,1,3)
-      qi0(j,k,2,4) = z1*q(j,k,idim1,2)+z2*q(j,k,i2,2)+z3*qi0(j,k,2,3)
-      qi0(j,k,3,4) = z1*q(j,k,idim1,3)+z2*q(j,k,i2,3)+z3*qi0(j,k,3,3)
-      qi0(j,k,4,4) = z1*q(j,k,idim1,4)+z2*q(j,k,i2,4)+z3*qi0(j,k,4,3)
-      qi0(j,k,5,4) = z1*q(j,k,idim1,5)+z2*q(j,k,i2,5)+z3*qi0(j,k,5,3)
-c 
-c     Turbulence
-c     only need to do advanced model turbulence B.C.s on finest grid
-c
-      if (ivmx.ge.2.and.level.ge.lglobal.and.ntime.ne.0) then 
-        if (abs(cqt).lt.1e-12) then
+        if (ivmx.ge.2.and.level.ge.lglobal.and.ntime.ne.0) then
           vi0(j,k,1,3) = 0.
           vi0(j,k,1,4) = 0.
           if (ivmx.eq.5) then 
@@ -1094,15 +910,49 @@ c
             ti0(j,k,1,4) = 2.*ti0(j,k,1,3)-tursav(j,k,idim-1,1)
             ti0(j,k,2,4) = 2.*ti0(j,k,2,3)-tursav(j,k,idim-1,2)
           endif
-        else
+        endif
+      else
+        pb  = q(j,k,idim1,5)
+        dpb = q(j,k,idim1,5)-q(j,k,idim1-1,5)
+        pb  = pb + dpb/2.0
+        if (real(pb).le.0.0)  pb = q(j,k,idim1,5)
+        uub = uub + ujet*rvel
+        vvb = vvb + vjet*rvel
+        wwb = wwb + wjet*rvel
+        qi0(j,k,1,3) = rhojet
+        qi0(j,k,2,3) = uub
+        qi0(j,k,3,3) = vvb
+        qi0(j,k,4,3) = wwb
+        qi0(j,k,5,3) = pb
+        bci(j,k,2)   = 1.0
+c
+        if (ivmx.ge.2.and.level.ge.lglobal.and.ntime.ne.0) then
           vi0(j,k,1,3) = vist3d(j,k,idim-1)
           vi0(j,k,1,4) = 0.
           do l=1,nummem
-            ti0(j,k,l,3) = ccmax(tur10(l), turwj(l))
+            t11 = (1-itrflg1)*tur10(l) +itrflg1*bcdata(jj,kk,ip,7+l)
             ti0(j,k,l,4) = ti0(j,k,l,3)
           enddo
         endif
-      endif
+      end if
+c
+c     f23 = 0.0  -  2-point extrapolation
+c           1.0  -  3-point extrapolation
+c
+      f23 = 0.0
+c
+      i2 = max(1,idim-2)
+      if (i2.eq.1) f23 = 0.0
+c
+      z1 =  -2.0 -1.5*f23
+      z2 =       +0.5*f23   
+      z3 = +(2.0 +    f23)
+c
+      qi0(j,k,1,4) = z1*q(j,k,idim1,1)+z2*q(j,k,i2,1)+z3*qi0(j,k,1,3)
+      qi0(j,k,2,4) = z1*q(j,k,idim1,2)+z2*q(j,k,i2,2)+z3*qi0(j,k,2,3)
+      qi0(j,k,3,4) = z1*q(j,k,idim1,3)+z2*q(j,k,i2,3)+z3*qi0(j,k,3,3)
+      qi0(j,k,4,4) = z1*q(j,k,idim1,4)+z2*q(j,k,i2,4)+z3*qi0(j,k,4,3)
+      qi0(j,k,5,4) = z1*q(j,k,idim1,5)+z2*q(j,k,i2,5)+z3*qi0(j,k,5,3)
  2300 continue
  2400 continue
 c
@@ -1111,138 +961,19 @@ c
       return
       end
 
-c     d_cyc > 0 pulsed jet
-c     d_cyc = 0 steady jet
-c     d_cyc < 0 one-minus-cosine
-c  a) pulsed jet (d_cyc>0):
-c       d_cyc = duty cycle of the pulse between (0, 1)
-c       t_cyc = period of unsteady jet
-c       t_s99 = time of the pulsed jet achieving its maximum value
-c         t_s99 = 0 => step function
-c         t_s99 > 0 => tanh function
-c         t_s99 < 0 => linear function
-c  b) one-shot jet (d_cyc = 0):
-c       t_cyc = jet start time
-c       t_s99 = time of the pulsed jet achieving its maximum value
-c         t_s99 = 0 => step function
-c         t_s99 > 0 => tanh function
-c         t_s99 < 0 => linear function
-c  c) one-minus-cosine jet (d_cyc < 0):
-c       d_cyc = -1 => continuous
-c       d_cyc = -2 => single wave
-c       t_s99 = time of the jet achieving its maximum value (half period)
-c       t_cyc = jet start time
-      function cq2036(time, cq0, cqu, t_cyc, t_s99, d_cyc) result(cqt)
+      pure function vel2036(time,ton,t99) result(vel)
 #ifdef CMPLX
       implicit complex(a-h,o-z)
 #endif
-        parameter pi   =3.141592653589793
-        parameter twopi=6.283185307179586
-        cqt = cq0
-        if (d_cyc.eq.0) then  ! one shot
-          t = time-t_cyc
-          if (t.lt.0) then 
-            cqt = cq0
-          elseif(t.ge.0.and.t.lt.abs(t_s99)) then 
-            c = t/abs(t_s99)
-            if (t_s99.gt.0) c = 0.5+0.5*tanh((c-0.5)*twopi)
-            cqt = cq0 + c*cqu
-          else 
-            cqt = cq0 + cqu
-          endif
-        elseif(d_cyc.lt.0) then  ! one-minus-cosine
-          t = time-t_cyc
-          if (t.le.0) then 
-            cqt = cq0
-          elseif (int(d_cyc).eq.-1.or.t.le.2*t_s99) then
-            cqt = cq0 + 0.5*cqu*(1.0-cos(pi*t/t_s99))
-          else
-            cqt = cq0
-          endif
-        else ! pulsed jet
-          t = mod(time, t_cyc)
-          t00 = 0.5*((1.0-d_cyc)*t_cyc-abs(t_s99)) 
-          t01 = t00 + abs(t_s99)
-          t11 = t_cyc - t00
-          t10 = t11 - abs(t_s99)
-          if (t.le.t00) then 
-            cqt=cq0
-          elseif (t.ge.t00.and.t.lt.t01) then 
-            dt = t-t00
-            c = dt/abs(t_s99)
-            if (t_s99.gt.0) c = 0.5+0.5*tanh((c-0.5)*twopi)
-            cqt = cq0 + c*cqu
-          elseif (t.ge.t01.and.t.lt.t10) then 
-            cqt = cq0+cqu
-          elseif (t.ge.t10.and.t.lt.t11) then 
-            dt = t11-t
-            c = dt/abs(t_s99)
-            if (t_s99.gt.0) c = 0.5+0.5*tanh((c-0.5)*twopi)
-            cqt = cq0 + c*cqu
-          else
-            cqt = cq0
-          endif
+        intent(in)::time,ton,t99
+        parameter pi = 3.141592653589793
+        tend = abs(ton)+abs(t99)
+        vel = 0.0
+        if (time.ge.tend) then
+          vel = 1.0
+        elseif (time.gt.abs(ton)) then
+          vel = (time-ton)/abs(t99)
+          if (t99.gt.0) vel=0.5*(1.0-cos(pi*t))
         endif
-      end function cq2036
-
-      subroutine bc2036_check(t_cyc,t_s99,d_cyc,nou,bou,ibufdim,nbuf)
-#ifdef CMPLX
-      implicit complex(a-h,o-z)
-#endif
-        character*120 bou(ibufdim,nbuf)
-        dimension nou(nbuf)
-        if (d_cyc .lt. 0) then ! one-minus-cosine
-          if (t_s99.lt.1e-20) then 
-            nou(1) = min(nou(1)+1,ibufdim)
-            write(bou(nou(1),1),*)' stopping in bc2036...',
-     .        ' one-minus-cosine jet, invalid half period t_s99=',
-     .        t_s99
-            call termn8(myid,-1,ibufdim,nbuf,bou,nou)
-          endif
-          if (t_cyc.lt.0) then 
-            nou(1) = min(nou(1)+1,ibufdim)
-            write(bou(nou(1),1),*)' stopping in bc2036...',
-     .        ' one-minus-cosine jet, invalid start time t_cyc=',
-     .        t_cyc
-            call termn8(myid,-1,ibufdim,nbuf,bou,nou)
-          endif
-          idc = int(d_cyc)
-          if (idc.ne.-1 .and. idc.ne.-2) then
-            nou(1) = min(nou(1)+1,ibufdim)
-            write(bou(nou(1),1),*)' stopping in bc2036...',
-     .        ' one-minus-cosine jet, invalid d_cyc=', d_cyc
-            call termn8(myid,-1,ibufdim,nbuf,bou,nou)
-          endif
-        elseif (d_cyc.eq.0) then ! one-shot
-          if (t_cyc.lt.0) then 
-            nou(1) = min(nou(1)+1,ibufdim)
-            write(bou(nou(1),1),*)' stopping in bc2036...',
-     .        ' one-shot jet, invalid start time t_cyc=',
-     .        t_cyc
-            call termn8(myid,-1,ibufdim,nbuf,bou,nou)
-          endif
-        else ! pulsed
-          if (t_cyc.lt.0) then 
-            nou(1) = min(nou(1)+1,ibufdim)
-            write(bou(nou(1),1),*)' stopping in bc2036...',
-     .        ' pulsed jet, invalid period t_cyc=',
-     .        t_cyc
-            call termn8(myid,-1,ibufdim,nbuf,bou,nou)
-          endif
-          ! check duty cycle
-          if (d_cyc.ge.1.0) then 
-            write(bou(nou(1),1),*)' stopping in bc2036...',
-     .        ' pulsed jet, invalid duty cycle d_cyc=',
-     .        d_cyc
-            call termn8(myid,-1,ibufdim,nbuf,bou,nou)
-          endif
-          ts99max = ccmin(d_cyc, 1.0-d_cyc)*t_cyc
-          if (abs(t_s99).gt.ts99max) then 
-            write(bou(nou(1),1),'(A,2(A,E10.3),A)')
-     .      ' stopping in bc2036...',
-     .      ' pulsed jet, invalid t_s99=', t_s99, 
-     .      ' must not be greater than ', ts99max
-            call termn8(myid,-1,ibufdim,nbuf,bou,nou)
-          endif
-        endif
-      end subroutine bc2036_check
+        if (ton.lt.0) vel=1.0-vel
+      end function vel2036

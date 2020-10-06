@@ -251,7 +251,6 @@ c
 
       common /gust/ igust
       common /fdsblend/ ifdsblend,cfdsblend,cfds_smin,cfds_smax,ifdsdump
-      common /walljet/ turwj(7)
 #if defined DIST_MPI
 c
 c***********************
@@ -610,19 +609,12 @@ c
          work(nlast+185)= cfdsblend
          work(nlast+186)= cfds_smin
          work(nlast+187)= cfds_smax
-         work(nlast+188)= ides_sla
-         work(nlast+189)= fkh_min
-         work(nlast+190)= fkh_max
-         work(nlast+191)= fkh_a1
-         work(nlast+192)= fkh_a2
-         work(nlast+193) = turwj(1)
-         work(nlast+194) = turwj(2)
-         work(nlast+195) = turwj(3)
-         work(nlast+196) = turwj(4)
-         work(nlast+197) = turwj(5)
-         work(nlast+198) = turwj(6)
-         work(nlast+199) = turwj(7)
-         work(nlast+200)= ifdsdump
+         work(nlast+188)= ifdsdump
+         work(nlast+189)= ides_sla
+         work(nlast+190)= fkh_min
+         work(nlast+191)= fkh_max
+         work(nlast+192)= fkh_a1
+         work(nlast+193)= fkh_a2
          nlast = nlast+nkey
       end if
 c
@@ -990,19 +982,12 @@ c
          cfdsblend = work(nlast+185)
          cfds_smin = work(nlast+186)
          cfds_smax = work(nlast+187)
-         ides_sla  = int(work(nlast+188))
-         fkh_min   = work(nlast+189)
-         fkh_max   = work(nlast+190)
-         fkh_a1    = work(nlast+191)
-         fkh_a2    = work(nlast+192)
-         turwj(1) = work(nlast+193)
-         turwj(2) = work(nlast+194)
-         turwj(3) = work(nlast+195)
-         turwj(4) = work(nlast+196)
-         turwj(5) = work(nlast+197)
-         turwj(6) = work(nlast+198)
-         turwj(7) = work(nlast+199)
-         ifdsdump = int(work(nlast+200))
+         ifdsdump = int(work(nlast+188))
+         ides_sla  = int(work(nlast+189))
+         fkh_min   = work(nlast+190)
+         fkh_max   = work(nlast+191)
+         fkh_a1    = work(nlast+192)
+         fkh_a2    = work(nlast+193)
       end if
 c
 c**************************
