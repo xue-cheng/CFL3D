@@ -1313,7 +1313,7 @@ c
      .       12x,2hcx,12x,2hcy,12x,2hcz,11x,3hcmx,11x,3hcmy,11x,3hcmz)
  1010 format(4x,5hsubit,3x,11hlog(subres),4x,9hmass_flow,8x,4hcftp,
      .       10x,4hcftv,8x,6hcftmom)
- 1020 format(3x,i6,9e14.5)
+ 1020 format(1x,i8,9e14.5)
  1040 format(4x,5hsubit,2x,12hlog(turres1),2x,12hlog(turres2),
      .       2x,5hnneg1,2x,5hnneg2)
  1041 format(4x,5hsubit,2x,12hlog(turres1),2x,12hlog(turres2),
@@ -1323,9 +1323,9 @@ c
      .       2x,12hlog(turres6),2x,12hlog(turres7),2x,5hnneg1,
      .       2x,5hnneg2,2x,5hnneg3,2x,5hnneg4,2x,5hnneg5,2x,5hnneg6,
      .       2x,5hnneg7)
- 1060 format(3x,i6,2e14.5,1x,i6,1x,i6)
- 1061 format(3x,i6,3e14.5,1x,i6,1x,i6,1x,i6)
- 1062 format(3x,i6,7e14.5,1x,i6,1x,i6,1x,i6,1x,i6,1x,i6,1x,i6,1x,i6)
+ 1060 format(1x,i8,2e14.5,1x,i6,1x,i6)
+ 1061 format(1x,i8,3e14.5,1x,i6,1x,i6,1x,i6)
+ 1062 format(1x,i8,7e14.5,1x,i6,1x,i6,1x,i6,1x,i6,1x,i6,1x,i6,1x,i6)
  1080 format(/1x,5hlevel,4x,3hblk,3x,4hiter,3x,8hresidual,3x,
      .       10htotal res.,5x,4hlift,8x,4hdrag,5x,10hside force)
  2000 format(' ',4x,i1,1x,i6,1x,i6,7(1x,e11.4))
