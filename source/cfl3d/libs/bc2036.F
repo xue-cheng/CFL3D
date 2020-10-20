@@ -972,8 +972,8 @@ c
         if (time.ge.tend) then
           vel = 1.0
         elseif (time.gt.abs(ton)) then
-          vel = (time-ton)/abs(t99)
-          if (t99.gt.0) vel=0.5*(1.0-cos(pi*t))
+          vel = (time-abs(ton))/abs(t99)
+          if (t99.gt.0) vel=0.5*(1.0-cos(pi*vel))
         endif
         if (ton.lt.0) vel=1.0-vel
       end function vel2036
