@@ -492,8 +492,14 @@ c  Add tau_ij's for general method:
           jiv2=(kpl-1)*jdim1
           do 1195 i=1,idim
             jiv=(i-1)*npl*jdim1 + (kpl-1)*jdim1
+            f3 = 0.0
+            if (idim.ge.4) f3 = 0.375
             ip1=min(i+1,idim-1)
+            ip2=min(i+2,idim-1)
             im2=max(i-2,1)
+            im3=max(i-3,1)
+            f1 = 1.5 +     f3
+            f2 =-0.5 - 2.0*f3
             do 1194 j=1,jdim1
               if (i.eq.1) then
                 rho=0.5*(q(j,kk,i,1)+qi0(j,kk,1,1))*(1.-wi0(j+jiv2,5))+
@@ -506,16 +512,16 @@ c  Add tau_ij's for general method:
      +              qi0(j,kk,4,1)*wi0(j+jiv2,5)
              v3d=0.5*(vist3d(j,kk,i)+vi0(j,kk,1,1))*(1.-wi0(j+jiv2,5))+
      +              vi0(j,kk,1,1)*wi0(j+jiv2,5)
-c               use 1st order interpolation at end
-                ux1=1.5*ux(j,kk,i,1)-0.5*ux(j,kk,ip1,1)
-                ux2=1.5*ux(j,kk,i,2)-0.5*ux(j,kk,ip1,2)
-                ux3=1.5*ux(j,kk,i,3)-0.5*ux(j,kk,ip1,3)
-                ux4=1.5*ux(j,kk,i,4)-0.5*ux(j,kk,ip1,4)
-                ux5=1.5*ux(j,kk,i,5)-0.5*ux(j,kk,ip1,5)
-                ux6=1.5*ux(j,kk,i,6)-0.5*ux(j,kk,ip1,6)
-                ux7=1.5*ux(j,kk,i,7)-0.5*ux(j,kk,ip1,7)
-                ux8=1.5*ux(j,kk,i,8)-0.5*ux(j,kk,ip1,8)
-                ux9=1.5*ux(j,kk,i,9)-0.5*ux(j,kk,ip1,9)
+c             use 1st/2nd order interpolation at end
+              ux1=f1*ux(j,kk,i,1)+f2*ux(j,kk,ip1,1)+f3*ux(j,kk,ip2,1)
+              ux2=f1*ux(j,kk,i,2)+f2*ux(j,kk,ip1,2)+f3*ux(j,kk,ip2,2)
+              ux3=f1*ux(j,kk,i,3)+f2*ux(j,kk,ip1,3)+f3*ux(j,kk,ip2,3)
+              ux4=f1*ux(j,kk,i,4)+f2*ux(j,kk,ip1,4)+f3*ux(j,kk,ip2,4)
+              ux5=f1*ux(j,kk,i,5)+f2*ux(j,kk,ip1,5)+f3*ux(j,kk,ip2,5)
+              ux6=f1*ux(j,kk,i,6)+f2*ux(j,kk,ip1,6)+f3*ux(j,kk,ip2,6)
+              ux7=f1*ux(j,kk,i,7)+f2*ux(j,kk,ip1,7)+f3*ux(j,kk,ip2,7)
+              ux8=f1*ux(j,kk,i,8)+f2*ux(j,kk,ip1,8)+f3*ux(j,kk,ip2,8)
+              ux9=f1*ux(j,kk,i,9)+f2*ux(j,kk,ip1,9)+f3*ux(j,kk,ip2,9)
               else if (i .eq. idim) then
                 rho=0.5*(q(j,kk,i-1,1)+qi0(j,kk,1,3))*
      +              (1.-wi0(j+jiv2,15))+
@@ -528,16 +534,16 @@ c               use 1st order interpolation at end
      +              qi0(j,kk,4,3)*wi0(j+jiv2,15)
            v3d=0.5*(vist3d(j,kk,i-1)+vi0(j,kk,1,3))*(1.-wi0(j+jiv2,15))+
      +              vi0(j,kk,1,3)*wi0(j+jiv2,15)
-c               use 1st order interpolation at end
-                ux1=1.5*ux(j,kk,i-1,1)-0.5*ux(j,kk,im2,1)
-                ux2=1.5*ux(j,kk,i-1,2)-0.5*ux(j,kk,im2,2)
-                ux3=1.5*ux(j,kk,i-1,3)-0.5*ux(j,kk,im2,3)
-                ux4=1.5*ux(j,kk,i-1,4)-0.5*ux(j,kk,im2,4)
-                ux5=1.5*ux(j,kk,i-1,5)-0.5*ux(j,kk,im2,5)
-                ux6=1.5*ux(j,kk,i-1,6)-0.5*ux(j,kk,im2,6)
-                ux7=1.5*ux(j,kk,i-1,7)-0.5*ux(j,kk,im2,7)
-                ux8=1.5*ux(j,kk,i-1,8)-0.5*ux(j,kk,im2,8)
-                ux9=1.5*ux(j,kk,i-1,9)-0.5*ux(j,kk,im2,9)
+c             use 1st/2nd order interpolation at end
+              ux1=f1*ux(j,kk,i-1,1)+f2*ux(j,kk,im2,1)+f3*ux(j,kk,im3,1)
+              ux2=f1*ux(j,kk,i-1,2)+f2*ux(j,kk,im2,2)+f3*ux(j,kk,im3,2)
+              ux3=f1*ux(j,kk,i-1,3)+f2*ux(j,kk,im2,3)+f3*ux(j,kk,im3,3)
+              ux4=f1*ux(j,kk,i-1,4)+f2*ux(j,kk,im2,4)+f3*ux(j,kk,im3,4)
+              ux5=f1*ux(j,kk,i-1,5)+f2*ux(j,kk,im2,5)+f3*ux(j,kk,im3,5)
+              ux6=f1*ux(j,kk,i-1,6)+f2*ux(j,kk,im2,6)+f3*ux(j,kk,im3,6)
+              ux7=f1*ux(j,kk,i-1,7)+f2*ux(j,kk,im2,7)+f3*ux(j,kk,im3,7)
+              ux8=f1*ux(j,kk,i-1,8)+f2*ux(j,kk,im2,8)+f3*ux(j,kk,im3,8)
+              ux9=f1*ux(j,kk,i-1,9)+f2*ux(j,kk,im2,9)+f3*ux(j,kk,im3,9)
               else
                 rho=0.5*(q(j,kk,i,1)+q(j,kk,i-1,1))
                 u=0.5*(q(j,kk,i,2)+q(j,kk,i-1,2))
