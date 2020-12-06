@@ -131,6 +131,7 @@ c
       common /gust/ igust
       common /fdsblend/ ifdsblend,cfdsblend,cfds_smin,cfds_smax,ifdsdump
       common /slasgs/ fkh_min, fkh_max, fkh_a1, fkh_a2
+      common /bcwjet/ jet_profile
 c
       ititr = 0
       nkey  = 0
@@ -1054,6 +1055,10 @@ c     Ref: DOI 10.1007/s10494-015-9618-0
       fkh_a1   = 0.15
       fkh_a2   = 0.3
       nkey     = nkey + 4
+
+c     jet profile
+      jet_profile = 0
+      nkey     = nkey + 1
 
 c
 c*********************************************
@@ -2126,6 +2131,9 @@ c
         lc2 = lc2 +1
         read(inpstr(lc2:lcl),*) realval(1)
         fkh_a2 = realval(1)
+      else if (inpstr(lc1:lc2).eq.'jet_profile') then
+        lc2 = lc2 +1
+        read(inpstr(lc2:lcl),*) jet_profile
 c
       else
 c

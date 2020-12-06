@@ -98,6 +98,7 @@ c
       common /unst/ time,cfltau,ntstep,ita,iunst,cfltau0,cfltauMax
       common /ivals/ p0,rho0,c0,u0,v0,w0,et0,h0,pt0,rhot0,qiv(5),
      .        tur10(7)
+      common /bcwjet/ jet_profile
 
 c   Check inputs
 
@@ -961,11 +962,13 @@ c
       return
       end
 
-      pure function vel2036(time,ton,t99) result(vel)
+      function vel2036(time,ton,t99) result(vel)
+        use module_wjet_profile, only: wjet_vel
 #ifdef CMPLX
       implicit complex(a-h,o-z)
 #endif
         intent(in)::time,ton,t99
+        common /bcwjet/ jet_profile
         parameter pi = 3.141592653589793
         tend = abs(ton)+abs(t99)
         vel = 0.0
@@ -973,7 +976,11 @@ c
           vel = 1.0
         elseif (time.gt.abs(ton)) then
           vel = (time-abs(ton))/abs(t99)
-          if (t99.gt.0) vel=0.5*(1.0-cos(pi*vel))
+          if (jet_profile.gt.0 ) then
+            vel = wjet_vel(vel)
+          elseif (t99.gt.0) then 
+            vel=0.5*(1.0-cos(pi*vel))
+          endif
         endif
         if (ton.lt.0) vel=1.0-vel
       end function vel2036

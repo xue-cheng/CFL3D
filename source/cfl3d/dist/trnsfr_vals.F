@@ -251,6 +251,7 @@ c
 
       common /gust/ igust
       common /fdsblend/ ifdsblend,cfdsblend,cfds_smin,cfds_smax,ifdsdump
+      common /bcwjet/ jet_profile
 #if defined DIST_MPI
 c
 c***********************
@@ -615,6 +616,7 @@ c
          work(nlast+191)= fkh_max
          work(nlast+192)= fkh_a1
          work(nlast+193)= fkh_a2
+         work(nlast+194)= jet_profile
          nlast = nlast+nkey
       end if
 c
@@ -988,6 +990,7 @@ c
          fkh_max   = work(nlast+191)
          fkh_a1    = work(nlast+192)
          fkh_a2    = work(nlast+193)
+         jet_profile = int(work(nlast+194))
       end if
 c
 c**************************

@@ -750,6 +750,20 @@ c***********************************************************************
 c      
       call init_fds_blend(nblock,levelg,mblk2nd,jdimg,kdimg,idimg)
       call init_des_info(nblock)
+      
+c
+c***********************************************************************
+c     read wall jet profile
+c***********************************************************************
+c      
+      iflag = 0
+      call read_wjet_profile(iflag)
+      if (iflag.ne.0) then 
+        nou(1) = min(nou(1)+1,ibufdim)
+        write(bou(nou(1),1),'(''stopping...cannot initialize '',
+     .    ''wall jet profile, flag='',I4)') iflag
+        call termn8(myid,-1,ibufdim,nbuf,bou,nou)
+      end if 
 c
 c***********************************************************************
 c     mesh sequencing - cycle through mesh sequences, coarser to finer
