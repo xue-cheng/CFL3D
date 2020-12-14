@@ -57,6 +57,7 @@ c              t_99 > 0: cosine blending function
 c
 c***********************************************************************
 c
+      use module_wjet_profile
 #   ifdef CMPLX
       implicit complex(a-h,o-z)
 #   endif
@@ -977,7 +978,7 @@ c
         elseif (time.gt.abs(ton)) then
           vel = (time-abs(ton))/abs(t99)
           if (jet_profile.gt.0 ) then
-            vel = wjet_vel(vel)
+            call wjet_vel(vel)
           elseif (t99.gt.0) then 
             vel=0.5*(1.0-cos(pi*vel))
           endif

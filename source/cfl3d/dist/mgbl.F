@@ -77,6 +77,7 @@ c
 #   else
       use module_kwstm, only:kws_get_nummem
 #   endif
+      use module_wjet_profile
       use module_fds_blend
       use module_des_save
 c

@@ -14,7 +14,7 @@ module module_kinds
     integer :: u
     logical :: e
     do u=100,9999
-      inquire(unit=ug, opened=e)
+      inquire(unit=u, opened=e)
       if (.not.e) exit
     enddo
   end function get_free_unit
