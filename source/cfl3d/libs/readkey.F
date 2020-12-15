@@ -1553,8 +1553,9 @@ c
         lc2 = lc2 +1
         read(inpstr(lc2:lcl),*) ides_sla
       else if (inpstr(lc1:lc2).eq.'fddes') then
-         read(inpstr(lc2:lcl),*) realval(1)
-         fddes = realval(1)
+        lc2 = lc2 +1
+        read(inpstr(lc2:lcl),*) realval(1)
+        fddes = realval(1)
 c
       else if (inpstr(lc1:lc2).eq.'iteravg') then
          lc2 = lc2 +1
