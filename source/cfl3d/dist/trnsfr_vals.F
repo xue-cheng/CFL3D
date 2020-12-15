@@ -146,7 +146,7 @@ c
      .                geom_img,surf_img,xrotrate_img,yrotrate_img,
      .                zrotrate_img
       common /cgns/ icgns,iccg,ibase,nzones,nsoluse,irind,jrind,krind
-      common /des/ cdes,ides,cddes,ides_sla
+      common /des/ cdes,ides,cddes,ides_sla,fddes
       common /slasgs/ fkh_min, fkh_max, fkh_a1, fkh_a2
       common /cfl/ dt0,dtold
       common /avgdata/ xnumavg,iteravg,xnumavg2,ipertavg,iclcd,isubit_r
@@ -617,6 +617,7 @@ c
          work(nlast+192)= fkh_a1
          work(nlast+193)= fkh_a2
          work(nlast+194)= jet_profile
+         work(nlast+195)= fddes
          nlast = nlast+nkey
       end if
 c
@@ -991,6 +992,7 @@ c
          fkh_a1    = work(nlast+192)
          fkh_a2    = work(nlast+193)
          jet_profile = int(work(nlast+194))
+         fddes     = work(nlast+195)
       end if
 c
 c**************************

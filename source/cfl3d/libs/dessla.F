@@ -12,7 +12,7 @@ c
 c
         common /twod/ i2d
         common /zero/ iexp
-        common /des/ cdes,ides,cddes,ides_sla
+        common /des/ cdes,ides,cddes,ides_sla,fddes
         common /slasgs/ fkh_min, fkh_max, fkh_a1, fkh_a2
         parameter osqrt3 = 0.5773502691896258
         parameter sqrt6  = 2.449489742783178

@@ -121,7 +121,7 @@ c
      .        isar,crot,isarc3d
       common /sourceterm/ xdir_only_source
       common /mms/ iexact_trunc,iexact_disc,iexact_ring
-      common /des/ cdes,ides,cddes,ides_sla
+      common /des/ cdes,ides,cddes,ides_sla,fddes
       common /memry/ lowmem_ux
       common /constit/ i_nonlin,c_nonlin,snonlin_lim,i_tauijs,i_qcr2000,
      .                 i_qcr2013,i_qcr2013v

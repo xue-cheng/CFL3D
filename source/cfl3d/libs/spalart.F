@@ -45,7 +45,7 @@ c
       dimension nou(nbuf)
       type(des_geom_t) :: des_geom
 c
-      common /des/ cdes,ides,cddes,ides_sla
+      common /des/ cdes,ides,cddes,ides_sla,fddes
       common /info/ title(20),rkap(3),xmach,alpha,beta,dt,fmax,nit,ntt,
      .        idiag(3),nitfo,iflagts,iflim(3),nres,levelb(5),mgflag,
      .        iconsf,mseq,ncyc1(5),levelt(5),nitfo1(5),ngam,nsm(5),iipv
@@ -1367,7 +1367,7 @@ c     DDES (TCFD 20:181-195, 2006)
      +              ux(j,k,i,7)**2 + ux(j,k,i,8)**2 + ux(j,k,i,9)**2
             rd = turre(j,k,i) /(ccmaxcr(sqrt(velterm),1e-10)*
      *                    akarman*akarman*dist*dist*re)
-            fd(j,k,i) = 1.0 - cctanh((8.0*rd)*(8.0*rd)*(8.0*rd))
+            fd(j,k,i) = 1.0 - cctanh((fddes*rd)**3)
             if( ides .ne. 7 ) then
                term = ccmaxrc(0.0,dist-cdes*delta) 
                damp1(j,k,i) = dist - fd(j,k,i)*term
@@ -1434,7 +1434,7 @@ c           rdt = vist3d*rd_deno/rho = turre*fv1*rd_deno
               fe1 = 2*exp(-9.0*ra2)
             end if
             fe = ccmaxcr(fe1-1.0, 0.)*Psi*fe2
-            fdtilde = ccmax(cctanh((rdt*8.0)**3), fb)
+            fdtilde = ccmax(cctanh((fddes*rdt)**3), fb)
             fd(j,k,i) = 1.0-fdtilde
             damp1(j,k,i) = fdtilde*(1.0+fe)*dist + 
      +        fd(j,k,i)*cdes*delta*Psi

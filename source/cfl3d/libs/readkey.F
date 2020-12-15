@@ -47,7 +47,7 @@ c
       dimension nou(nbuf)
 c
       common /unst/ time,cfltau,ntstep,ita,iunst,cfltau0,cfltauMax
-      common /des/ cdes,ides,cddes,ides_sla
+      common /des/ cdes,ides,cddes,ides_sla,fddes
       common /avgdata/ xnumavg,iteravg,xnumavg2,ipertavg,iclcd,isubit_r
       common /moov/movie,nframes,icall1,lhdr,icoarsemovie,i2dmovie
       common /ginfo2/ lq2avg,iskip_blocks,inc_2d(3),inc_coarse(3)
@@ -457,6 +457,8 @@ c
       ides_sla = 0
       nkey     = nkey + 1
 
+      fddes = 8.0
+      nkey     = nkey + 1
 c
 c     flag to store iteration-averaged q values in a PLOT3D file:
 c     0 = no averaging or storage, 1 = start averaging now,
@@ -1550,6 +1552,9 @@ c
       else if (inpstr(lc1:lc2).eq.'ides_sla') then
         lc2 = lc2 +1
         read(inpstr(lc2:lcl),*) ides_sla
+      else if (inpstr(lc1:lc2).eq.'fddes') then
+         read(inpstr(lc2:lcl),*) realval(1)
+         fddes = realval(1)
 c
       else if (inpstr(lc1:lc2).eq.'iteravg') then
          lc2 = lc2 +1
